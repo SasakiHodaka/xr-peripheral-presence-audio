@@ -39,10 +39,10 @@ def source_csv_paths(log_dir=DEFAULT_LOG_DIR):
     )
 
 
-def latest_csv_path():
-    files = list(reversed(source_csv_paths()))
+def latest_csv_path(log_dir=DEFAULT_LOG_DIR):
+    files = list(reversed(source_csv_paths(log_dir)))
     if not files:
-        raise FileNotFoundError(f"No peripheral CSV files found in {DEFAULT_LOG_DIR}")
+        raise FileNotFoundError(f"No peripheral CSV files found in {log_dir}")
     return files[0]
 
 
@@ -491,11 +491,17 @@ def main():
         default=MIN_TRIAL_DURATION_SECONDS,
         help="Minimum trial duration in seconds for durationCheck. Defaults to 10.",
     )
+    parser.add_argument(
+        "--log-dir",
+        default=str(DEFAULT_LOG_DIR),
+        help="Directory containing peripheral_state_log*.csv files.",
+    )
     args = parser.parse_args()
+    log_dir = Path(args.log_dir)
 
     if args.html_report:
         output_path = Path(args.html_report_path) if args.html_report_path else None
-        written_path, file_count, row_count = write_html_report(DEFAULT_LOG_DIR, output_path, args.min_duration)
+        written_path, file_count, row_count = write_html_report(log_dir, output_path, args.min_duration)
         print(f"HTML report: {written_path}")
         print(f"Source CSV files: {file_count}")
         print(f"Report rows: {row_count}")
@@ -503,12 +509,12 @@ def main():
 
     if args.batch:
         output_path = Path(args.batch_summary_csv) if args.batch_summary_csv else None
-        written_path, file_count = write_batch_summary_csv(DEFAULT_LOG_DIR, output_path, args.min_duration)
+        written_path, file_count = write_batch_summary_csv(log_dir, output_path, args.min_duration)
         print(f"Batch summary CSV: {written_path}")
         print(f"Source CSV files: {file_count}")
         return
 
-    path = Path(args.csv_path) if args.csv_path else latest_csv_path()
+    path = Path(args.csv_path) if args.csv_path else latest_csv_path(log_dir)
     rows = load_rows(path)
     summaries = summarize(rows)
     print_summary(path, rows, summaries)

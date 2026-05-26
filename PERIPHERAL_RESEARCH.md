@@ -123,6 +123,13 @@ python Tools/analyze_peripheral_csv.py --batch --min-duration 15
 python Tools/analyze_peripheral_csv.py --html-report --min-duration 15
 ```
 
+Use `--log-dir` when analyzing logs from another project or copied folder:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --batch --log-dir "C:\path\to\logs"
+python Tools/analyze_peripheral_csv.py --html-report --log-dir "C:\path\to\logs"
+```
+
 The script prints per-target row counts, state counts, first detection times, `outOfView + approaching` counts, and the time from first `approaching` to first `near`.
 
 ## Current Scope
