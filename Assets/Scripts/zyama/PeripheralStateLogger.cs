@@ -16,6 +16,7 @@ public class PeripheralStateLogger : MonoBehaviour
 
     [Header("CSV")]
     public string fileName = "peripheral_state_log.csv";
+    public bool includeExperimentMetadataInFileName = true;
     public bool appendTimestampToFileName = true;
     public float logInterval = 0.1f;
     public bool logNoneState = true;
@@ -91,19 +92,69 @@ public class PeripheralStateLogger : MonoBehaviour
 
     private string BuildFileName()
     {
-        if (!appendTimestampToFileName)
+        if (!includeExperimentMetadataInFileName && !appendTimestampToFileName)
             return fileName;
 
         string directory = Path.GetDirectoryName(fileName);
         string name = Path.GetFileNameWithoutExtension(fileName);
         string extension = Path.GetExtension(fileName);
-        string timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
-        string stampedFileName = name + "_" + timestamp + extension;
+        string suffix = BuildFileNameSuffix();
+        string stampedFileName = string.IsNullOrEmpty(suffix) ? name + extension : name + "_" + suffix + extension;
 
         if (string.IsNullOrEmpty(directory))
             return stampedFileName;
 
         return Path.Combine(directory, stampedFileName);
+    }
+
+    private string BuildFileNameSuffix()
+    {
+        List<string> parts = new List<string>();
+
+        if (includeExperimentMetadataInFileName)
+        {
+            AddFileNamePart(parts, participantId);
+            AddFileNamePart(parts, conditionLabel);
+            AddFileNamePart(parts, trialId);
+        }
+
+        if (appendTimestampToFileName)
+            parts.Add(System.DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture));
+
+        return string.Join("_", parts);
+    }
+
+    private static void AddFileNamePart(List<string> parts, string value)
+    {
+        string sanitized = SanitizeFileNamePart(value);
+        if (!string.IsNullOrEmpty(sanitized))
+            parts.Add(sanitized);
+    }
+
+    private static string SanitizeFileNamePart(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+        StringBuilder builder = new StringBuilder(value.Length);
+        for (int i = 0; i < value.Length; i++)
+        {
+            char c = value[i];
+            bool invalid = false;
+            for (int j = 0; j < invalidChars.Length; j++)
+            {
+                if (c == invalidChars[j])
+                {
+                    invalid = true;
+                    break;
+                }
+            }
+
+            builder.Append(invalid || char.IsWhiteSpace(c) ? '_' : c);
+        }
+
+        return builder.ToString().Trim('_');
     }
 
     private void WriteResult(PeripheralDetectionResult result)

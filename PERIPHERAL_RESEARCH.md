@@ -21,8 +21,10 @@ C:\Users\acd-pc67\AppData\LocalLow\DefaultCompany\My project
 The logger uses timestamped filenames by default:
 
 ```text
-peripheral_state_log_yyyyMMdd_HHmmss.csv
+peripheral_state_log_P001_demo_T001_yyyyMMdd_HHmmss.csv
 ```
+
+`PeripheralStateLogger.includeExperimentMetadataInFileName` controls whether `participantId`, `conditionLabel`, and `trialId` are included in the file name.
 
 ## CSV Columns
 
