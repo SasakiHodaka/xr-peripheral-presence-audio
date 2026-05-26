@@ -7,9 +7,10 @@
 3. Select `PeripheralSystem`.
 4. Assign `Main Camera` or `XR Origin/Main Camera` to `PeripheralStateDetector.userHead` if it is empty.
 5. Set `PeripheralStateLogger.participantId`, `conditionLabel`, and `trialId` in the Inspector.
-6. Enter Play Mode.
-7. Confirm that the Game view shows `Peripheral Debug`.
-8. Confirm that Unity Console prints `Peripheral CSV created: ...`.
+6. Set `PeripheralTrialController.trialDurationSeconds` if the trial length should differ from the default.
+7. Enter Play Mode.
+8. Confirm that the Game view shows `Peripheral Debug`.
+9. Confirm that Unity Console prints `Peripheral CSV created: ...`.
 
 CSV files are written to Unity's `Application.persistentDataPath`.
 In the current Windows Editor setup this is typically:
@@ -54,6 +55,15 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - Whether `crossing` appears during `Target_Crossing` movement.
 - Whether `speaking` appears only for speaking targets.
 - Whether `viewAngle` and `localX` match the user's intuitive left/right and front/back perception.
+
+## Trial Timing
+
+`PeripheralTrialController` is added to `PeripheralSystem` by `Create Demo Hierarchy`.
+It tracks elapsed trial time and displays it in `Peripheral Debug`.
+
+- `trialDurationSeconds`: expected trial length.
+- `autoStopEditorPlayMode`: stops Play Mode automatically when the duration is reached. Keep this off unless you want automatic stopping during Unity Editor tests.
+- `logTrialCompleted`: prints a Console message when the trial duration is reached.
 
 ## CSV Analysis Script
 
