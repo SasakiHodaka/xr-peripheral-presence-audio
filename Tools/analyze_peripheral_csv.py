@@ -9,6 +9,7 @@ from pathlib import Path
 DEFAULT_LOG_DIR = Path.home() / "AppData" / "LocalLow" / "DefaultCompany" / "My project"
 STATE_COLUMNS = ("outOfView", "approaching", "speaking", "gazing", "near", "crossing")
 METADATA_COLUMNS = ("participantId", "conditionLabel", "trialId")
+MIN_TRIAL_DURATION_SECONDS = 10.0
 
 
 def parse_bool(value):
@@ -226,6 +227,7 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
         "trialId",
         "targetId",
         "demoCheck",
+        "durationCheck",
         "rows",
         "duration",
         "outOfViewApproaching",
@@ -252,6 +254,7 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
                     "trialId": item["metadata"]["trialId"],
                     "targetId": item["targetId"],
                     "demoCheck": demo_check(item),
+                    "durationCheck": duration_check(item),
                     "rows": item["rows"],
                     "duration": f"{item['duration']:.3f}",
                     "outOfViewApproaching": item["outOfViewApproaching"],
@@ -283,6 +286,7 @@ def collect_batch_rows(log_dir=DEFAULT_LOG_DIR):
                 "trialId": item["metadata"]["trialId"],
                 "targetId": item["targetId"],
                 "demoCheck": demo_check(item),
+                "durationCheck": duration_check(item),
                 "rows": item["rows"],
                 "duration": f"{item['duration']:.3f}",
                 "outOfViewApproaching": item["outOfViewApproaching"],
@@ -317,6 +321,14 @@ def demo_check(summary):
     return "-"
 
 
+def duration_check(summary):
+    duration = summary["duration"]
+    if duration >= MIN_TRIAL_DURATION_SECONDS:
+        return "OK"
+
+    return f"Short (<{MIN_TRIAL_DURATION_SECONDS:.0f}s)"
+
+
 def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
     if output_path is None:
         output_path = log_dir / "peripheral_report.html"
@@ -329,6 +341,7 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
         "trialId",
         "targetId",
         "demoCheck",
+        "durationCheck",
         "rows",
         "duration",
         "outOfViewApproaching",
@@ -344,7 +357,7 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
     table_rows = []
     for row in rows:
         cells = "".join(format_html_cell(row, column) for column in columns)
-        row_class = "ok" if row.get("demoCheck") == "OK" else "check"
+        row_class = "ok" if row.get("demoCheck") == "OK" and row.get("durationCheck") == "OK" else "check"
         table_rows.append(f"<tr class=\"{row_class}\">{cells}</tr>")
 
     header_cells = "".join(f"<th>{html.escape(column)}</th>" for column in columns)
@@ -425,7 +438,7 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
 
 def format_html_cell(row, column):
     value = str(row.get(column, ""))
-    if column == "demoCheck":
+    if column in ("demoCheck", "durationCheck"):
         class_name = "status-ok" if value == "OK" else "status-check"
         return f"<td class=\"{class_name}\">{html.escape(value)}</td>"
 
