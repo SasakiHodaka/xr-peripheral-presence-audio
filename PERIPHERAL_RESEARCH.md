@@ -1,0 +1,53 @@
+# Peripheral Research Notes
+
+## Demo Flow
+
+1. Open `Assets/Scenes/SampleScene.unity`.
+2. Run `Tools > Peripheral Research > Create Demo Hierarchy`.
+3. Select `PeripheralSystem`.
+4. Assign `Main Camera` or `XR Origin/Main Camera` to `PeripheralStateDetector.userHead` if it is empty.
+5. Enter Play Mode.
+6. Confirm that the Game view shows `Peripheral Debug`.
+7. Confirm that Unity Console prints `Peripheral CSV created: ...`.
+
+CSV files are written to Unity's `Application.persistentDataPath`.
+In the current Windows Editor setup this is typically:
+
+```text
+C:\Users\acd-pc67\AppData\LocalLow\DefaultCompany\My project
+```
+
+The logger uses timestamped filenames by default:
+
+```text
+peripheral_state_log_yyyyMMdd_HHmmss.csv
+```
+
+## CSV Columns
+
+- `time`: Unity play time in seconds.
+- `targetId`: Target identifier, such as `Target_Approach`.
+- `state`: Combined peripheral state flags.
+- `outOfView`: Target is outside the configured field of view.
+- `approaching`: Target is moving toward the user.
+- `speaking`: Target is marked as speaking.
+- `gazing`: Target is facing the user within the gaze threshold.
+- `near`: Target is inside the near-distance threshold.
+- `crossing`: Target is crossing in front of the user.
+- `distance`: Distance from user head to target in meters.
+- `viewAngle`: Angle between user forward direction and target direction.
+- `radialSpeed`: Positive value means the target is approaching.
+- `lateralSpeed`: Sideways movement speed in user-local space.
+- `localX`, `localY`, `localZ`: Target position in user-head local coordinates.
+
+## Initial Metrics To Inspect
+
+- How often `outOfView` is true while `approaching` is also true.
+- Time from first `approaching` detection to `near`.
+- Whether `crossing` appears during `Target_Crossing` movement.
+- Whether `speaking` appears only for speaking targets.
+- Whether `viewAngle` and `localX` match the user's intuitive left/right and front/back perception.
+
+## Current Scope
+
+Older Presence and greeting-meeting assets remain in the project. Do not delete them yet; `PeripheralTarget` can still bridge to `PresenceTarget` and `GroupWorkPresenceAudio`.
