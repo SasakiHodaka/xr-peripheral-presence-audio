@@ -116,6 +116,13 @@ Very short Play Mode sessions can show `Check approach/near` because the approac
 
 The batch CSV and HTML report also include `durationCheck`. Sessions shorter than 10 seconds are marked as `Short (<10s)` because the approach target may not have enough time to reach the near-distance threshold.
 
+Use `--min-duration` to change this threshold:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --batch --min-duration 15
+python Tools/analyze_peripheral_csv.py --html-report --min-duration 15
+```
+
 The script prints per-target row counts, state counts, first detection times, `outOfView + approaching` counts, and the time from first `approaching` to first `near`.
 
 ## Current Scope

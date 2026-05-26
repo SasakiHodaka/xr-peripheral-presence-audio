@@ -216,7 +216,7 @@ def write_summary_csv(source_path, summaries, output_path=None):
     return output_path
 
 
-def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
+def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None, min_duration=MIN_TRIAL_DURATION_SECONDS):
     if output_path is None:
         output_path = log_dir / "peripheral_batch_summary.csv"
 
@@ -254,7 +254,7 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
                     "trialId": item["metadata"]["trialId"],
                     "targetId": item["targetId"],
                     "demoCheck": demo_check(item),
-                    "durationCheck": duration_check(item),
+                    "durationCheck": duration_check(item, min_duration),
                     "rows": item["rows"],
                     "duration": f"{item['duration']:.3f}",
                     "outOfViewApproaching": item["outOfViewApproaching"],
@@ -270,7 +270,7 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
     return output_path, len(source_paths)
 
 
-def collect_batch_rows(log_dir=DEFAULT_LOG_DIR):
+def collect_batch_rows(log_dir=DEFAULT_LOG_DIR, min_duration=MIN_TRIAL_DURATION_SECONDS):
     source_paths = source_csv_paths(log_dir)
     if not source_paths:
         raise FileNotFoundError(f"No peripheral CSV files found in {log_dir}")
@@ -286,7 +286,7 @@ def collect_batch_rows(log_dir=DEFAULT_LOG_DIR):
                 "trialId": item["metadata"]["trialId"],
                 "targetId": item["targetId"],
                 "demoCheck": demo_check(item),
-                "durationCheck": duration_check(item),
+                "durationCheck": duration_check(item, min_duration),
                 "rows": item["rows"],
                 "duration": f"{item['duration']:.3f}",
                 "outOfViewApproaching": item["outOfViewApproaching"],
@@ -321,19 +321,19 @@ def demo_check(summary):
     return "-"
 
 
-def duration_check(summary):
+def duration_check(summary, min_duration=MIN_TRIAL_DURATION_SECONDS):
     duration = summary["duration"]
-    if duration >= MIN_TRIAL_DURATION_SECONDS:
+    if duration >= min_duration:
         return "OK"
 
-    return f"Short (<{MIN_TRIAL_DURATION_SECONDS:.0f}s)"
+    return f"Short (<{min_duration:g}s)"
 
 
-def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
+def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None, min_duration=MIN_TRIAL_DURATION_SECONDS):
     if output_path is None:
         output_path = log_dir / "peripheral_report.html"
 
-    rows, file_count = collect_batch_rows(log_dir)
+    rows, file_count = collect_batch_rows(log_dir, min_duration)
     columns = [
         "sourceCsv",
         "participantId",
@@ -485,11 +485,17 @@ def main():
         "--html-report-path",
         help="Output path for --html-report. Defaults to peripheral_report.html in the log directory.",
     )
+    parser.add_argument(
+        "--min-duration",
+        type=float,
+        default=MIN_TRIAL_DURATION_SECONDS,
+        help="Minimum trial duration in seconds for durationCheck. Defaults to 10.",
+    )
     args = parser.parse_args()
 
     if args.html_report:
         output_path = Path(args.html_report_path) if args.html_report_path else None
-        written_path, file_count, row_count = write_html_report(DEFAULT_LOG_DIR, output_path)
+        written_path, file_count, row_count = write_html_report(DEFAULT_LOG_DIR, output_path, args.min_duration)
         print(f"HTML report: {written_path}")
         print(f"Source CSV files: {file_count}")
         print(f"Report rows: {row_count}")
@@ -497,7 +503,7 @@ def main():
 
     if args.batch:
         output_path = Path(args.batch_summary_csv) if args.batch_summary_csv else None
-        written_path, file_count = write_batch_summary_csv(DEFAULT_LOG_DIR, output_path)
+        written_path, file_count = write_batch_summary_csv(DEFAULT_LOG_DIR, output_path, args.min_duration)
         print(f"Batch summary CSV: {written_path}")
         print(f"Source CSV files: {file_count}")
         return
