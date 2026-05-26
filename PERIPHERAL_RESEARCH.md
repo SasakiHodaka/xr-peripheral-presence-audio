@@ -25,6 +25,7 @@ peripheral_state_log_P001_demo_T001_yyyyMMdd_HHmmss.csv
 ```
 
 `PeripheralStateLogger.includeExperimentMetadataInFileName` controls whether `participantId`, `conditionLabel`, and `trialId` are included in the file name.
+The analysis script also uses this filename pattern as a fallback when older CSV rows do not contain metadata columns.
 
 ## CSV Columns
 

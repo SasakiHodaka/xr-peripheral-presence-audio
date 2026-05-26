@@ -100,6 +100,38 @@ def summarize(rows):
     return summaries
 
 
+def apply_metadata_fallback(summaries, source_path):
+    fallback = parse_metadata_from_file_name(source_path)
+    for item in summaries:
+        for column in METADATA_COLUMNS:
+            if not item["metadata"].get(column):
+                item["metadata"][column] = fallback.get(column, "")
+
+    return summaries
+
+
+def parse_metadata_from_file_name(path):
+    metadata = {column: "" for column in METADATA_COLUMNS}
+    stem = path.stem
+    prefix = "peripheral_state_log_"
+    if not stem.startswith(prefix):
+        return metadata
+
+    parts = stem[len(prefix):].split("_")
+    if len(parts) < 5:
+        return metadata
+
+    maybe_date = parts[-2]
+    maybe_time = parts[-1]
+    if not (maybe_date.isdigit() and len(maybe_date) == 8 and maybe_time.isdigit() and len(maybe_time) == 6):
+        return metadata
+
+    metadata["participantId"] = parts[0]
+    metadata["conditionLabel"] = "_".join(parts[1:-3]) if len(parts) > 5 else parts[1]
+    metadata["trialId"] = parts[-3]
+    return metadata
+
+
 def first_true_time(rows, column):
     for row in rows:
         if parse_bool(row.get(column)):
@@ -162,7 +194,7 @@ def write_summary_csv(source_path, summaries, output_path=None):
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
 
-        for item in summaries:
+        for item in apply_metadata_fallback(summaries, source_path):
             row = {
                 "participantId": item["metadata"]["participantId"],
                 "conditionLabel": item["metadata"]["conditionLabel"],
@@ -212,7 +244,7 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
 
         for source_path in source_paths:
             rows = load_rows(source_path)
-            for item in summarize(rows):
+            for item in apply_metadata_fallback(summarize(rows), source_path):
                 row = {
                     "sourceCsv": source_path.name,
                     "participantId": item["metadata"]["participantId"],
@@ -243,7 +275,7 @@ def collect_batch_rows(log_dir=DEFAULT_LOG_DIR):
     rows = []
     for source_path in source_paths:
         source_rows = load_rows(source_path)
-        for item in summarize(source_rows):
+        for item in apply_metadata_fallback(summarize(source_rows), source_path):
             row = {
                 "sourceCsv": source_path.name,
                 "participantId": item["metadata"]["participantId"],
