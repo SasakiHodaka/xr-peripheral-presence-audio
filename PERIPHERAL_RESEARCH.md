@@ -56,10 +56,22 @@ Run this from the project root to analyze the newest CSV log:
 python Tools/analyze_peripheral_csv.py
 ```
 
+This also writes a summary CSV next to the source log:
+
+```text
+peripheral_state_log_yyyyMMdd_HHmmss_summary.csv
+```
+
 To analyze a specific CSV file:
 
 ```powershell
 python Tools/analyze_peripheral_csv.py "C:\Users\acd-pc67\AppData\LocalLow\DefaultCompany\My project\peripheral_state_log_yyyyMMdd_HHmmss.csv"
+```
+
+To print only without writing a summary CSV:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --no-summary-csv
 ```
 
 The script prints per-target row counts, state counts, first detection times, `outOfView + approaching` counts, and the time from first `approaching` to first `near`.

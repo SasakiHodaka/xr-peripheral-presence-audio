@@ -22,7 +22,11 @@ def parse_float(value, default=0.0):
 
 def latest_csv_path():
     files = sorted(
-        DEFAULT_LOG_DIR.glob("peripheral_state_log*.csv"),
+        (
+            path
+            for path in DEFAULT_LOG_DIR.glob("peripheral_state_log*.csv")
+            if not path.stem.endswith("_summary")
+        ),
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     )
@@ -118,6 +122,48 @@ def print_summary(path, rows, summaries):
         print()
 
 
+def write_summary_csv(source_path, summaries, output_path=None):
+    if output_path is None:
+        output_path = source_path.with_name(source_path.stem + "_summary.csv")
+
+    fieldnames = [
+        "targetId",
+        "rows",
+        "duration",
+        "outOfViewApproaching",
+        "approachToNear",
+    ]
+    fieldnames.extend(f"{column}Count" for column in STATE_COLUMNS)
+    fieldnames.extend(f"{column}FirstTime" for column in STATE_COLUMNS)
+
+    with output_path.open("w", encoding="utf-8-sig", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for item in summaries:
+            row = {
+                "targetId": item["targetId"],
+                "rows": item["rows"],
+                "duration": f"{item['duration']:.3f}",
+                "outOfViewApproaching": item["outOfViewApproaching"],
+                "approachToNear": format_optional_float(item["approachToNear"]),
+            }
+
+            for column in STATE_COLUMNS:
+                row[f"{column}Count"] = item["counts"][column]
+                row[f"{column}FirstTime"] = format_optional_float(item["firstTimes"][column])
+
+            writer.writerow(row)
+
+    return output_path
+
+
+def format_optional_float(value):
+    if value is None:
+        return ""
+    return f"{value:.3f}"
+
+
 def main():
     parser = argparse.ArgumentParser(description="Summarize Unity peripheral research CSV logs.")
     parser.add_argument(
@@ -125,12 +171,26 @@ def main():
         nargs="?",
         help="CSV file to analyze. If omitted, the latest peripheral_state_log*.csv is used.",
     )
+    parser.add_argument(
+        "--no-summary-csv",
+        action="store_true",
+        help="Print only; do not write a *_summary.csv file.",
+    )
+    parser.add_argument(
+        "--summary-csv",
+        help="Output path for the summary CSV. Defaults to <input>_summary.csv.",
+    )
     args = parser.parse_args()
 
     path = Path(args.csv_path) if args.csv_path else latest_csv_path()
     rows = load_rows(path)
     summaries = summarize(rows)
     print_summary(path, rows, summaries)
+
+    if not args.no_summary_csv:
+        output_path = Path(args.summary_csv) if args.summary_csv else None
+        written_path = write_summary_csv(path, summaries, output_path)
+        print(f"Summary CSV: {written_path}")
 
 
 if __name__ == "__main__":
