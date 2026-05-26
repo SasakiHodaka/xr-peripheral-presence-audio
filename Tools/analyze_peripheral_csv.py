@@ -102,6 +102,29 @@ def summarize(rows):
     return summaries
 
 
+def summarize_source(source_path):
+    rows = load_rows(source_path)
+    summaries = apply_metadata_fallback(summarize(rows), source_path)
+    if summaries:
+        return summaries
+
+    return [empty_summary(source_path)]
+
+
+def empty_summary(source_path):
+    metadata = parse_metadata_from_file_name(source_path)
+    return {
+        "metadata": metadata,
+        "targetId": "(none)",
+        "rows": 0,
+        "duration": 0.0,
+        "counts": {column: 0 for column in STATE_COLUMNS},
+        "firstTimes": {column: None for column in STATE_COLUMNS},
+        "approachToNear": None,
+        "outOfViewApproaching": 0,
+    }
+
+
 def apply_metadata_fallback(summaries, source_path):
     fallback = parse_metadata_from_file_name(source_path)
     for item in summaries:
@@ -246,8 +269,7 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None, min_durat
         writer.writeheader()
 
         for source_path in source_paths:
-            rows = load_rows(source_path)
-            for item in apply_metadata_fallback(summarize(rows), source_path):
+            for item in summarize_source(source_path):
                 row = {
                     "sourceCsv": source_path.name,
                     "participantId": item["metadata"]["participantId"],
@@ -278,8 +300,7 @@ def collect_batch_rows(log_dir=DEFAULT_LOG_DIR, min_duration=MIN_TRIAL_DURATION_
 
     rows = []
     for source_path in source_paths:
-        source_rows = load_rows(source_path)
-        for item in apply_metadata_fallback(summarize(source_rows), source_path):
+        for item in summarize_source(source_path):
             row = {
                 "sourceCsv": source_path.name,
                 "participantId": item["metadata"]["participantId"],
@@ -306,6 +327,10 @@ def collect_batch_rows(log_dir=DEFAULT_LOG_DIR, min_duration=MIN_TRIAL_DURATION_
 def demo_check(summary):
     target_id = summary["targetId"]
     counts = summary["counts"]
+    condition = summary["metadata"].get("conditionLabel", "")
+
+    if condition == "None":
+        return "OK" if summary["rows"] == 0 else "Check none"
 
     if target_id == "Target_Approach":
         return "OK" if counts["approaching"] > 0 and counts["near"] > 0 else "Check approach/near"
@@ -323,6 +348,9 @@ def demo_check(summary):
 
 
 def duration_check(summary, min_duration=MIN_TRIAL_DURATION_SECONDS):
+    if summary["metadata"].get("conditionLabel") == "None" and summary["rows"] == 0:
+        return "OK"
+
     duration = summary["duration"]
     if duration >= min_duration:
         return "OK"
@@ -517,7 +545,7 @@ def main():
 
     path = Path(args.csv_path) if args.csv_path else latest_csv_path(log_dir)
     rows = load_rows(path)
-    summaries = summarize(rows)
+    summaries = summarize_source(path)
     print_summary(path, rows, summaries)
 
     if not args.no_summary_csv:
