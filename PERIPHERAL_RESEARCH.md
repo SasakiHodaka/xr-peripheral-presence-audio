@@ -34,6 +34,8 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - `conditionLabel`: Experimental condition label set on `PeripheralStateLogger`.
 - `trialId`: Trial identifier set on `PeripheralStateLogger`.
 - `time`: Unity play time in seconds.
+- `trialElapsed`: Elapsed trial time from `PeripheralTrialController`.
+- `trialDuration`: Expected trial length from `PeripheralTrialController`.
 - `targetId`: Target identifier, such as `Target_Approach`.
 - `state`: Combined peripheral state flags.
 - `outOfView`: Target is outside the configured field of view.
