@@ -48,6 +48,22 @@ peripheral_state_log_yyyyMMdd_HHmmss.csv
 - Whether `speaking` appears only for speaking targets.
 - Whether `viewAngle` and `localX` match the user's intuitive left/right and front/back perception.
 
+## CSV Analysis Script
+
+Run this from the project root to analyze the newest CSV log:
+
+```powershell
+python Tools/analyze_peripheral_csv.py
+```
+
+To analyze a specific CSV file:
+
+```powershell
+python Tools/analyze_peripheral_csv.py "C:\Users\acd-pc67\AppData\LocalLow\DefaultCompany\My project\peripheral_state_log_yyyyMMdd_HHmmss.csv"
+```
+
+The script prints per-target row counts, state counts, first detection times, `outOfView + approaching` counts, and the time from first `approaching` to first `near`.
+
 ## Current Scope
 
 Older Presence and greeting-meeting assets remain in the project. Do not delete them yet; `PeripheralTarget` can still bridge to `PresenceTarget` and `GroupWorkPresenceAudio`.
