@@ -98,6 +98,15 @@ This writes:
 peripheral_report.html
 ```
 
+The batch CSV and HTML report include `demoCheck`. This is a quick demo-health check, not a final research metric:
+
+- `Target_Approach`: expects `approaching` and `near`.
+- `Target_Back`: expects `outOfView + approaching`.
+- `Target_Crossing`: expects `crossing`.
+- `Target_Speaking`: expects `speaking`.
+
+Very short Play Mode sessions can show `Check approach/near` because the approach target may not have enough time to reach `near`.
+
 The script prints per-target row counts, state counts, first detection times, `outOfView + approaching` counts, and the time from first `approaching` to first `near`.
 
 ## Current Scope

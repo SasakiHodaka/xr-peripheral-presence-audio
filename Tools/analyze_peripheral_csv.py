@@ -174,6 +174,7 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
     fieldnames = [
         "sourceCsv",
         "targetId",
+        "demoCheck",
         "rows",
         "duration",
         "outOfViewApproaching",
@@ -196,6 +197,7 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
                 row = {
                     "sourceCsv": source_path.name,
                     "targetId": item["targetId"],
+                    "demoCheck": demo_check(item),
                     "rows": item["rows"],
                     "duration": f"{item['duration']:.3f}",
                     "outOfViewApproaching": item["outOfViewApproaching"],
@@ -223,6 +225,7 @@ def collect_batch_rows(log_dir=DEFAULT_LOG_DIR):
             row = {
                 "sourceCsv": source_path.name,
                 "targetId": item["targetId"],
+                "demoCheck": demo_check(item),
                 "rows": item["rows"],
                 "duration": f"{item['duration']:.3f}",
                 "outOfViewApproaching": item["outOfViewApproaching"],
@@ -238,6 +241,25 @@ def collect_batch_rows(log_dir=DEFAULT_LOG_DIR):
     return rows, len(source_paths)
 
 
+def demo_check(summary):
+    target_id = summary["targetId"]
+    counts = summary["counts"]
+
+    if target_id == "Target_Approach":
+        return "OK" if counts["approaching"] > 0 and counts["near"] > 0 else "Check approach/near"
+
+    if target_id == "Target_Back":
+        return "OK" if summary["outOfViewApproaching"] > 0 else "Check rear approach"
+
+    if target_id == "Target_Crossing":
+        return "OK" if counts["crossing"] > 0 else "Check crossing"
+
+    if target_id == "Target_Speaking":
+        return "OK" if counts["speaking"] > 0 else "Check speaking"
+
+    return "-"
+
+
 def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
     if output_path is None:
         output_path = log_dir / "peripheral_report.html"
@@ -246,6 +268,7 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
     columns = [
         "sourceCsv",
         "targetId",
+        "demoCheck",
         "rows",
         "duration",
         "outOfViewApproaching",
@@ -260,8 +283,9 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
 
     table_rows = []
     for row in rows:
-        cells = "".join(f"<td>{html.escape(str(row.get(column, '')))}</td>" for column in columns)
-        table_rows.append(f"<tr>{cells}</tr>")
+        cells = "".join(format_html_cell(row, column) for column in columns)
+        row_class = "ok" if row.get("demoCheck") == "OK" else "check"
+        table_rows.append(f"<tr class=\"{row_class}\">{cells}</tr>")
 
     header_cells = "".join(f"<th>{html.escape(column)}</th>" for column in columns)
     document = f"""<!doctype html>
@@ -309,6 +333,17 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
     tr:nth-child(even) {{
       background: #f8fafc;
     }}
+    tr.check td {{
+      background: #fff8e6;
+    }}
+    .status-ok {{
+      color: #0b6b3a;
+      font-weight: 600;
+    }}
+    .status-check {{
+      color: #9a3412;
+      font-weight: 600;
+    }}
   </style>
 </head>
 <body>
@@ -326,6 +361,15 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
 
     output_path.write_text(document, encoding="utf-8")
     return output_path, file_count, len(rows)
+
+
+def format_html_cell(row, column):
+    value = str(row.get(column, ""))
+    if column == "demoCheck":
+        class_name = "status-ok" if value == "OK" else "status-check"
+        return f"<td class=\"{class_name}\">{html.escape(value)}</td>"
+
+    return f"<td>{html.escape(value)}</td>"
 
 
 def format_optional_float(value):
