@@ -11,13 +11,21 @@ public class PeripheralStateLogger : MonoBehaviour
 
     [Header("CSV")]
     public string fileName = "peripheral_state_log.csv";
+    public bool appendTimestampToFileName = true;
     public float logInterval = 0.1f;
     public bool logNoneState = true;
-    public bool flushEachWrite = false;
+    public bool flushEachWrite = true;
 
     private StreamWriter writer;
     private float timer;
     private string filePath;
+    private bool warnedMissingDetector;
+    private bool warnedMissingUserHead;
+
+    public string FilePath
+    {
+        get { return filePath; }
+    }
 
     private void Awake()
     {
@@ -27,7 +35,7 @@ public class PeripheralStateLogger : MonoBehaviour
 
     private void Start()
     {
-        filePath = Path.Combine(Application.persistentDataPath, fileName);
+        filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
         writer.WriteLine("time,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ");
         writer.Flush();
@@ -37,7 +45,29 @@ public class PeripheralStateLogger : MonoBehaviour
 
     private void Update()
     {
-        if (detector == null || writer == null) return;
+        if (writer == null) return;
+
+        if (detector == null)
+        {
+            if (!warnedMissingDetector)
+            {
+                Debug.LogWarning("PeripheralStateLogger has no detector assigned.", this);
+                warnedMissingDetector = true;
+            }
+
+            return;
+        }
+
+        if (detector.userHead == null)
+        {
+            if (!warnedMissingUserHead)
+            {
+                Debug.LogWarning("PeripheralStateDetector.userHead is empty. Assign Main Camera or XR Origin/Main Camera.", detector);
+                warnedMissingUserHead = true;
+            }
+
+            return;
+        }
 
         timer += Time.deltaTime;
         if (timer < logInterval) return;
@@ -52,6 +82,23 @@ public class PeripheralStateLogger : MonoBehaviour
 
         if (flushEachWrite)
             writer.Flush();
+    }
+
+    private string BuildFileName()
+    {
+        if (!appendTimestampToFileName)
+            return fileName;
+
+        string directory = Path.GetDirectoryName(fileName);
+        string name = Path.GetFileNameWithoutExtension(fileName);
+        string extension = Path.GetExtension(fileName);
+        string timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
+        string stampedFileName = name + "_" + timestamp + extension;
+
+        if (string.IsNullOrEmpty(directory))
+            return stampedFileName;
+
+        return Path.Combine(directory, stampedFileName);
     }
 
     private void WriteResult(PeripheralDetectionResult result)
