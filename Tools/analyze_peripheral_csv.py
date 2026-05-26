@@ -67,7 +67,7 @@ def summarize(rows):
             for column in STATE_COLUMNS
         }
         first_times = {
-            column: first_true_time(target_rows, column)
+            column: first_true_time(target_rows, column, time_column)
             for column in STATE_COLUMNS
         }
 
@@ -75,7 +75,7 @@ def summarize(rows):
         first_approach = first_times["approaching"]
         if first_approach is not None:
             for row in target_rows:
-                time = parse_float(row.get("time"))
+                time = parse_float(row.get(time_column))
                 if time >= first_approach and parse_bool(row.get("near")):
                     approach_to_near = time - first_approach
                     break
@@ -134,10 +134,10 @@ def parse_metadata_from_file_name(path):
     return metadata
 
 
-def first_true_time(rows, column):
+def first_true_time(rows, column, time_column="time"):
     for row in rows:
         if parse_bool(row.get(column)):
-            return parse_float(row.get("time"))
+            return parse_float(row.get(time_column))
     return None
 
 

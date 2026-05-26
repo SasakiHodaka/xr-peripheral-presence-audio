@@ -64,8 +64,11 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 It tracks elapsed trial time and displays it in `Peripheral Debug`.
 
 - `trialDurationSeconds`: expected trial length.
+- `preTrialSeconds`: preparation time before logging and target movement start.
 - `autoStopEditorPlayMode`: stops Play Mode automatically when the duration is reached. Keep this off unless you want automatic stopping during Unity Editor tests.
 - `logTrialCompleted`: prints a Console message when the trial duration is reached.
+
+During pre-trial time, demo target movement and CSV row logging are paused. The Game view shows `Pre-trial: ...s`.
 
 ## CSV Analysis Script
 
