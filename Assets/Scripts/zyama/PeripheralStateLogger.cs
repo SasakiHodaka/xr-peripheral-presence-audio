@@ -9,6 +9,11 @@ public class PeripheralStateLogger : MonoBehaviour
     [Header("References")]
     public PeripheralStateDetector detector;
 
+    [Header("Experiment")]
+    public string participantId = "P001";
+    public string conditionLabel = "demo";
+    public string trialId = "T001";
+
     [Header("CSV")]
     public string fileName = "peripheral_state_log.csv";
     public bool appendTimestampToFileName = true;
@@ -37,7 +42,7 @@ public class PeripheralStateLogger : MonoBehaviour
     {
         filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        writer.WriteLine("time,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ");
+        writer.WriteLine("participantId,conditionLabel,trialId,time,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ");
         writer.Flush();
 
         Debug.Log("Peripheral CSV created: " + filePath);
@@ -107,6 +112,9 @@ public class PeripheralStateLogger : MonoBehaviour
             return;
 
         string line = string.Join(",",
+            Escape(participantId),
+            Escape(conditionLabel),
+            Escape(trialId),
             Time.time.ToString("F3", CultureInfo.InvariantCulture),
             Escape(result.targetId),
             Escape(result.state.ToString()),

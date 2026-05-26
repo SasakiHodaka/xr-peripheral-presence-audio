@@ -6,9 +6,10 @@
 2. Run `Tools > Peripheral Research > Create Demo Hierarchy`.
 3. Select `PeripheralSystem`.
 4. Assign `Main Camera` or `XR Origin/Main Camera` to `PeripheralStateDetector.userHead` if it is empty.
-5. Enter Play Mode.
-6. Confirm that the Game view shows `Peripheral Debug`.
-7. Confirm that Unity Console prints `Peripheral CSV created: ...`.
+5. Set `PeripheralStateLogger.participantId`, `conditionLabel`, and `trialId` in the Inspector.
+6. Enter Play Mode.
+7. Confirm that the Game view shows `Peripheral Debug`.
+8. Confirm that Unity Console prints `Peripheral CSV created: ...`.
 
 CSV files are written to Unity's `Application.persistentDataPath`.
 In the current Windows Editor setup this is typically:
@@ -25,6 +26,9 @@ peripheral_state_log_yyyyMMdd_HHmmss.csv
 
 ## CSV Columns
 
+- `participantId`: Participant identifier set on `PeripheralStateLogger`.
+- `conditionLabel`: Experimental condition label set on `PeripheralStateLogger`.
+- `trialId`: Trial identifier set on `PeripheralStateLogger`.
 - `time`: Unity play time in seconds.
 - `targetId`: Target identifier, such as `Target_Approach`.
 - `state`: Combined peripheral state flags.

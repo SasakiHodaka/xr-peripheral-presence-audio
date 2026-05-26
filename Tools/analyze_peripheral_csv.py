@@ -8,6 +8,7 @@ from pathlib import Path
 
 DEFAULT_LOG_DIR = Path.home() / "AppData" / "LocalLow" / "DefaultCompany" / "My project"
 STATE_COLUMNS = ("outOfView", "approaching", "speaking", "gazing", "near", "crossing")
+METADATA_COLUMNS = ("participantId", "conditionLabel", "trialId")
 
 
 def parse_bool(value):
@@ -85,6 +86,7 @@ def summarize(rows):
 
         summaries.append(
             {
+                "metadata": first_metadata(target_rows),
                 "targetId": target_id or "(empty)",
                 "rows": len(target_rows),
                 "duration": duration,
@@ -103,6 +105,14 @@ def first_true_time(rows, column):
         if parse_bool(row.get(column)):
             return parse_float(row.get("time"))
     return None
+
+
+def first_metadata(rows):
+    metadata = {}
+    first_row = rows[0] if rows else {}
+    for column in METADATA_COLUMNS:
+        metadata[column] = first_row.get(column, "")
+    return metadata
 
 
 def fmt_time(value):
@@ -136,6 +146,9 @@ def write_summary_csv(source_path, summaries, output_path=None):
         output_path = source_path.with_name(source_path.stem + "_summary.csv")
 
     fieldnames = [
+        "participantId",
+        "conditionLabel",
+        "trialId",
         "targetId",
         "rows",
         "duration",
@@ -151,6 +164,9 @@ def write_summary_csv(source_path, summaries, output_path=None):
 
         for item in summaries:
             row = {
+                "participantId": item["metadata"]["participantId"],
+                "conditionLabel": item["metadata"]["conditionLabel"],
+                "trialId": item["metadata"]["trialId"],
                 "targetId": item["targetId"],
                 "rows": item["rows"],
                 "duration": f"{item['duration']:.3f}",
@@ -173,6 +189,9 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
 
     fieldnames = [
         "sourceCsv",
+        "participantId",
+        "conditionLabel",
+        "trialId",
         "targetId",
         "demoCheck",
         "rows",
@@ -196,6 +215,9 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
             for item in summarize(rows):
                 row = {
                     "sourceCsv": source_path.name,
+                    "participantId": item["metadata"]["participantId"],
+                    "conditionLabel": item["metadata"]["conditionLabel"],
+                    "trialId": item["metadata"]["trialId"],
                     "targetId": item["targetId"],
                     "demoCheck": demo_check(item),
                     "rows": item["rows"],
@@ -224,6 +246,9 @@ def collect_batch_rows(log_dir=DEFAULT_LOG_DIR):
         for item in summarize(source_rows):
             row = {
                 "sourceCsv": source_path.name,
+                "participantId": item["metadata"]["participantId"],
+                "conditionLabel": item["metadata"]["conditionLabel"],
+                "trialId": item["metadata"]["trialId"],
                 "targetId": item["targetId"],
                 "demoCheck": demo_check(item),
                 "rows": item["rows"],
@@ -267,6 +292,9 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
     rows, file_count = collect_batch_rows(log_dir)
     columns = [
         "sourceCsv",
+        "participantId",
+        "conditionLabel",
+        "trialId",
         "targetId",
         "demoCheck",
         "rows",
