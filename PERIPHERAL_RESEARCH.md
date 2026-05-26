@@ -70,6 +70,20 @@ It tracks elapsed trial time and displays it in `Peripheral Debug`.
 
 During pre-trial time, demo target movement and CSV row logging are paused. The Game view shows `Pre-trial: ...s`.
 
+## Trial Conditions
+
+`PeripheralTrialConditionController` is added to `PeripheralSystem` by `Create Demo Hierarchy`.
+Use it to move from the all-target demo toward one-condition-per-trial runs.
+
+- `AllDemoTargets`: enables all demo targets.
+- `Approach`: enables only `Target_Approach`.
+- `BackApproach`: enables only `Target_Back`.
+- `Crossing`: enables only `Target_Crossing`.
+- `Speaking`: enables only `Target_Speaking`.
+- `None`: disables all demo targets.
+
+When `updateLoggerConditionLabel` is enabled, `PeripheralStateLogger.conditionLabel` is updated from the selected condition.
+
 ## CSV Analysis Script
 
 Run this from the project root to analyze the newest CSV log:

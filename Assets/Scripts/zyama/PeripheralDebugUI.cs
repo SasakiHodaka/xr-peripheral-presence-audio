@@ -6,6 +6,7 @@ public class PeripheralDebugUI : MonoBehaviour
     [Header("References")]
     public PeripheralStateDetector detector;
     public PeripheralTrialController trialController;
+    public PeripheralTrialConditionController conditionController;
 
     [Header("UI")]
     public bool showDebugUI = true;
@@ -21,6 +22,9 @@ public class PeripheralDebugUI : MonoBehaviour
 
         if (trialController == null)
             trialController = GetComponent<PeripheralTrialController>();
+
+        if (conditionController == null)
+            conditionController = GetComponent<PeripheralTrialConditionController>();
     }
 
     private void InitStyles()
@@ -59,8 +63,9 @@ public class PeripheralDebugUI : MonoBehaviour
 
         IReadOnlyList<PeripheralDetectionResult> results = detector.LatestResults;
         DrawLine(0, "User Head: " + detector.userHead.name, Color.white);
-        DrawLine(1, "Targets: " + detector.targets.Count + " / Results: " + results.Count, Color.white);
-        DrawTrialLine(2);
+        DrawLine(1, "Condition: " + GetConditionLabel(), Color.white);
+        DrawLine(2, "Targets: " + detector.targets.Count + " / Results: " + results.Count, Color.white);
+        DrawTrialLine(3);
 
         int visibleRows = Mathf.Min(results.Count, 5);
         for (int i = 0; i < visibleRows; i++)
@@ -72,8 +77,13 @@ public class PeripheralDebugUI : MonoBehaviour
                 " | dist " + result.distance.ToString("F2") +
                 " | angle " + result.viewAngle.ToString("F1");
 
-            DrawLine(i + 3, line, GetStateColor(result.state));
+            DrawLine(i + 4, line, GetStateColor(result.state));
         }
+    }
+
+    private string GetConditionLabel()
+    {
+        return conditionController != null ? conditionController.condition.ToString() : "(none)";
     }
 
     private void DrawTrialLine(int row)

@@ -18,20 +18,25 @@ public static class PeripheralResearchSetup
         PeripheralStateDetector detector = GetOrAdd<PeripheralStateDetector>(systemObject);
         PeripheralStateLogger logger = GetOrAdd<PeripheralStateLogger>(systemObject);
         PeripheralTrialController trialController = GetOrAdd<PeripheralTrialController>(systemObject);
+        PeripheralTrialConditionController conditionController = GetOrAdd<PeripheralTrialConditionController>(systemObject);
         PeripheralDebugUI debugUI = GetOrAdd<PeripheralDebugUI>(systemObject);
         logger.detector = detector;
         logger.trialController = trialController;
+        conditionController.detector = detector;
+        conditionController.logger = logger;
         debugUI.detector = detector;
         debugUI.trialController = trialController;
+        debugUI.conditionController = conditionController;
         detector.userHead = userHead;
         detector.autoFindTargets = false;
         detector.targets.Clear();
 
         GameObject targetsRoot = GetOrCreateRoot("PeripheralTargets");
-        CreateTarget("Target_Approach", targetsRoot.transform, userHead, DemoAvatarMoveMode.ApproachUser, new Vector3(0f, 1.6f, 5f), detector, trialController);
-        CreateTarget("Target_Crossing", targetsRoot.transform, userHead, DemoAvatarMoveMode.CrossInFront, new Vector3(-2f, 1.6f, 2f), detector, trialController);
-        CreateTarget("Target_Speaking", targetsRoot.transform, userHead, DemoAvatarMoveMode.Idle, new Vector3(2f, 1.6f, 2.5f), detector, trialController, true);
-        CreateTarget("Target_Back", targetsRoot.transform, userHead, DemoAvatarMoveMode.BackApproach, new Vector3(0f, 1.6f, -5f), detector, trialController);
+        conditionController.approachTarget = CreateTarget("Target_Approach", targetsRoot.transform, userHead, DemoAvatarMoveMode.ApproachUser, new Vector3(0f, 1.6f, 5f), detector, trialController);
+        conditionController.crossingTarget = CreateTarget("Target_Crossing", targetsRoot.transform, userHead, DemoAvatarMoveMode.CrossInFront, new Vector3(-2f, 1.6f, 2f), detector, trialController);
+        conditionController.speakingTarget = CreateTarget("Target_Speaking", targetsRoot.transform, userHead, DemoAvatarMoveMode.Idle, new Vector3(2f, 1.6f, 2.5f), detector, trialController, true);
+        conditionController.backApproachTarget = CreateTarget("Target_Back", targetsRoot.transform, userHead, DemoAvatarMoveMode.BackApproach, new Vector3(0f, 1.6f, -5f), detector, trialController);
+        conditionController.ApplyCondition();
 
         Selection.activeGameObject = systemObject;
         EditorUtility.SetDirty(systemObject);
@@ -39,7 +44,7 @@ public static class PeripheralResearchSetup
         Debug.Log("Peripheral research demo hierarchy created. Assign XR Origin/Main Camera to PeripheralStateDetector.userHead if it is empty.");
     }
 
-    private static void CreateTarget(
+    private static PeripheralTarget CreateTarget(
         string targetId,
         Transform parent,
         Transform userHead,
@@ -78,6 +83,7 @@ public static class PeripheralResearchSetup
             detector.targets.Add(target);
 
         EditorUtility.SetDirty(targetObject);
+        return target;
     }
 
     private static GameObject GetOrCreateRoot(string name)
