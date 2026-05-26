@@ -17,9 +17,11 @@ public static class PeripheralResearchSetup
         GameObject systemObject = GetOrCreateRoot("PeripheralSystem");
         PeripheralStateDetector detector = GetOrAdd<PeripheralStateDetector>(systemObject);
         PeripheralStateLogger logger = GetOrAdd<PeripheralStateLogger>(systemObject);
+        PeripheralTrialController trialController = GetOrAdd<PeripheralTrialController>(systemObject);
         PeripheralDebugUI debugUI = GetOrAdd<PeripheralDebugUI>(systemObject);
         logger.detector = detector;
         debugUI.detector = detector;
+        debugUI.trialController = trialController;
         detector.userHead = userHead;
         detector.autoFindTargets = false;
         detector.targets.Clear();

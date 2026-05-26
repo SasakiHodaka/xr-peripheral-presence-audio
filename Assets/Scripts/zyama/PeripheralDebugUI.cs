@@ -5,6 +5,7 @@ public class PeripheralDebugUI : MonoBehaviour
 {
     [Header("References")]
     public PeripheralStateDetector detector;
+    public PeripheralTrialController trialController;
 
     [Header("UI")]
     public bool showDebugUI = true;
@@ -17,6 +18,9 @@ public class PeripheralDebugUI : MonoBehaviour
     {
         if (detector == null)
             detector = GetComponent<PeripheralStateDetector>();
+
+        if (trialController == null)
+            trialController = GetComponent<PeripheralTrialController>();
     }
 
     private void InitStyles()
@@ -56,6 +60,7 @@ public class PeripheralDebugUI : MonoBehaviour
         IReadOnlyList<PeripheralDetectionResult> results = detector.LatestResults;
         DrawLine(0, "User Head: " + detector.userHead.name, Color.white);
         DrawLine(1, "Targets: " + detector.targets.Count + " / Results: " + results.Count, Color.white);
+        DrawTrialLine(2);
 
         int visibleRows = Mathf.Min(results.Count, 5);
         for (int i = 0; i < visibleRows; i++)
@@ -67,8 +72,27 @@ public class PeripheralDebugUI : MonoBehaviour
                 " | dist " + result.distance.ToString("F2") +
                 " | angle " + result.viewAngle.ToString("F1");
 
-            DrawLine(i + 2, line, GetStateColor(result.state));
+            DrawLine(i + 3, line, GetStateColor(result.state));
         }
+    }
+
+    private void DrawTrialLine(int row)
+    {
+        if (trialController == null)
+        {
+            DrawLine(row, "Trial: not configured", Color.white);
+            return;
+        }
+
+        string line =
+            "Trial: " +
+            trialController.ElapsedSeconds.ToString("F1") +
+            " / " +
+            trialController.trialDurationSeconds.ToString("F1") +
+            "s";
+
+        Color color = trialController.IsComplete ? Color.green : Color.white;
+        DrawLine(row, line, color);
     }
 
     private void DrawLine(int row, string text, Color color)
