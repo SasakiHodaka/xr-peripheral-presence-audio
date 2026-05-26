@@ -74,6 +74,18 @@ To print only without writing a summary CSV:
 python Tools/analyze_peripheral_csv.py --no-summary-csv
 ```
 
+To summarize all source logs in the log directory:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --batch
+```
+
+This writes:
+
+```text
+peripheral_batch_summary.csv
+```
+
 The script prints per-target row counts, state counts, first detection times, `outOfView + approaching` counts, and the time from first `approaching` to first `near`.
 
 ## Current Scope
