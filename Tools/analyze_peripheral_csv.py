@@ -58,7 +58,8 @@ def summarize(rows):
 
     summaries = []
     for target_id, target_rows in sorted(by_target.items()):
-        times = [parse_float(row.get("time")) for row in target_rows]
+        time_column = "trialElapsed" if target_rows and "trialElapsed" in target_rows[0] else "time"
+        times = [parse_float(row.get(time_column)) for row in target_rows]
         duration = max(times) - min(times) if times else 0.0
 
         counts = {

@@ -8,6 +8,7 @@ public class PeripheralStateLogger : MonoBehaviour
 {
     [Header("References")]
     public PeripheralStateDetector detector;
+    public PeripheralTrialController trialController;
 
     [Header("Experiment")]
     public string participantId = "P001";
@@ -37,13 +38,16 @@ public class PeripheralStateLogger : MonoBehaviour
     {
         if (detector == null)
             detector = GetComponent<PeripheralStateDetector>();
+
+        if (trialController == null)
+            trialController = GetComponent<PeripheralTrialController>();
     }
 
     private void Start()
     {
         filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        writer.WriteLine("participantId,conditionLabel,trialId,time,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ");
+        writer.WriteLine("participantId,conditionLabel,trialId,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ");
         writer.Flush();
 
         Debug.Log("Peripheral CSV created: " + filePath);
@@ -167,6 +171,8 @@ public class PeripheralStateLogger : MonoBehaviour
             Escape(conditionLabel),
             Escape(trialId),
             Time.time.ToString("F3", CultureInfo.InvariantCulture),
+            GetTrialElapsed().ToString("F3", CultureInfo.InvariantCulture),
+            GetTrialDuration().ToString("F3", CultureInfo.InvariantCulture),
             Escape(result.targetId),
             Escape(result.state.ToString()),
             HasState(result.state, PeripheralState.OutOfView),
@@ -185,6 +191,16 @@ public class PeripheralStateLogger : MonoBehaviour
         );
 
         writer.WriteLine(line);
+    }
+
+    private float GetTrialElapsed()
+    {
+        return trialController != null ? trialController.ElapsedSeconds : Time.time;
+    }
+
+    private float GetTrialDuration()
+    {
+        return trialController != null ? trialController.trialDurationSeconds : 0f;
     }
 
     private static bool HasState(PeripheralState value, PeripheralState state)

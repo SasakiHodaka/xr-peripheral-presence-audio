@@ -20,6 +20,7 @@ public static class PeripheralResearchSetup
         PeripheralTrialController trialController = GetOrAdd<PeripheralTrialController>(systemObject);
         PeripheralDebugUI debugUI = GetOrAdd<PeripheralDebugUI>(systemObject);
         logger.detector = detector;
+        logger.trialController = trialController;
         debugUI.detector = detector;
         debugUI.trialController = trialController;
         detector.userHead = userHead;
