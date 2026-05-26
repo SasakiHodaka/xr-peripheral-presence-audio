@@ -86,6 +86,18 @@ This writes:
 peripheral_batch_summary.csv
 ```
 
+To generate a browser-readable HTML report:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --html-report
+```
+
+This writes:
+
+```text
+peripheral_report.html
+```
+
 The script prints per-target row counts, state counts, first detection times, `outOfView + approaching` counts, and the time from first `approaching` to first `near`.
 
 ## Current Scope

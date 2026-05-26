@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import csv
+import html
 from collections import defaultdict
 from pathlib import Path
 
@@ -210,6 +211,123 @@ def write_batch_summary_csv(log_dir=DEFAULT_LOG_DIR, output_path=None):
     return output_path, len(source_paths)
 
 
+def collect_batch_rows(log_dir=DEFAULT_LOG_DIR):
+    source_paths = source_csv_paths(log_dir)
+    if not source_paths:
+        raise FileNotFoundError(f"No peripheral CSV files found in {log_dir}")
+
+    rows = []
+    for source_path in source_paths:
+        source_rows = load_rows(source_path)
+        for item in summarize(source_rows):
+            row = {
+                "sourceCsv": source_path.name,
+                "targetId": item["targetId"],
+                "rows": item["rows"],
+                "duration": f"{item['duration']:.3f}",
+                "outOfViewApproaching": item["outOfViewApproaching"],
+                "approachToNear": format_optional_float(item["approachToNear"]),
+            }
+
+            for column in STATE_COLUMNS:
+                row[f"{column}Count"] = item["counts"][column]
+                row[f"{column}FirstTime"] = format_optional_float(item["firstTimes"][column])
+
+            rows.append(row)
+
+    return rows, len(source_paths)
+
+
+def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None):
+    if output_path is None:
+        output_path = log_dir / "peripheral_report.html"
+
+    rows, file_count = collect_batch_rows(log_dir)
+    columns = [
+        "sourceCsv",
+        "targetId",
+        "rows",
+        "duration",
+        "outOfViewApproaching",
+        "approachToNear",
+        "outOfViewCount",
+        "approachingCount",
+        "speakingCount",
+        "gazingCount",
+        "nearCount",
+        "crossingCount",
+    ]
+
+    table_rows = []
+    for row in rows:
+        cells = "".join(f"<td>{html.escape(str(row.get(column, '')))}</td>" for column in columns)
+        table_rows.append(f"<tr>{cells}</tr>")
+
+    header_cells = "".join(f"<th>{html.escape(column)}</th>" for column in columns)
+    document = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Peripheral Research Report</title>
+  <style>
+    body {{
+      font-family: Segoe UI, Arial, sans-serif;
+      margin: 24px;
+      color: #1f2933;
+      background: #f7f9fb;
+    }}
+    h1 {{
+      font-size: 24px;
+      margin: 0 0 8px;
+    }}
+    .meta {{
+      margin: 0 0 20px;
+      color: #52606d;
+    }}
+    table {{
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+      font-size: 13px;
+    }}
+    th, td {{
+      border: 1px solid #d9e2ec;
+      padding: 7px 9px;
+      text-align: right;
+      white-space: nowrap;
+    }}
+    th {{
+      background: #e6f6ff;
+      color: #102a43;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }}
+    td:first-child, td:nth-child(2), th:first-child, th:nth-child(2) {{
+      text-align: left;
+    }}
+    tr:nth-child(even) {{
+      background: #f8fafc;
+    }}
+  </style>
+</head>
+<body>
+  <h1>Peripheral Research Report</h1>
+  <p class="meta">Source CSV files: {file_count} / Rows: {len(rows)}</p>
+  <table>
+    <thead><tr>{header_cells}</tr></thead>
+    <tbody>
+      {''.join(table_rows)}
+    </tbody>
+  </table>
+</body>
+</html>
+"""
+
+    output_path.write_text(document, encoding="utf-8")
+    return output_path, file_count, len(rows)
+
+
 def format_optional_float(value):
     if value is None:
         return ""
@@ -241,7 +359,24 @@ def main():
         "--batch-summary-csv",
         help="Output path for --batch. Defaults to peripheral_batch_summary.csv in the log directory.",
     )
+    parser.add_argument(
+        "--html-report",
+        action="store_true",
+        help="Write an HTML report for all peripheral source CSVs.",
+    )
+    parser.add_argument(
+        "--html-report-path",
+        help="Output path for --html-report. Defaults to peripheral_report.html in the log directory.",
+    )
     args = parser.parse_args()
+
+    if args.html_report:
+        output_path = Path(args.html_report_path) if args.html_report_path else None
+        written_path, file_count, row_count = write_html_report(DEFAULT_LOG_DIR, output_path)
+        print(f"HTML report: {written_path}")
+        print(f"Source CSV files: {file_count}")
+        print(f"Report rows: {row_count}")
+        return
 
     if args.batch:
         output_path = Path(args.batch_summary_csv) if args.batch_summary_csv else None
