@@ -14,6 +14,7 @@ public class DemoAvatarMover : MonoBehaviour
     [Header("References")]
     public Transform userHead;
     public PeripheralTarget target;
+    public PeripheralTrialController trialController;
 
     [Header("Motion")]
     public DemoAvatarMoveMode moveMode = DemoAvatarMoveMode.Idle;
@@ -42,6 +43,7 @@ public class DemoAvatarMover : MonoBehaviour
     private void Update()
     {
         if (userHead == null) return;
+        if (trialController != null && !trialController.IsRunning) return;
 
         elapsed += Time.deltaTime;
 

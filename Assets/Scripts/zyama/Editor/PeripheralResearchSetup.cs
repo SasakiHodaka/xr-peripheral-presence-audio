@@ -28,10 +28,10 @@ public static class PeripheralResearchSetup
         detector.targets.Clear();
 
         GameObject targetsRoot = GetOrCreateRoot("PeripheralTargets");
-        CreateTarget("Target_Approach", targetsRoot.transform, userHead, DemoAvatarMoveMode.ApproachUser, new Vector3(0f, 1.6f, 5f), detector);
-        CreateTarget("Target_Crossing", targetsRoot.transform, userHead, DemoAvatarMoveMode.CrossInFront, new Vector3(-2f, 1.6f, 2f), detector);
-        CreateTarget("Target_Speaking", targetsRoot.transform, userHead, DemoAvatarMoveMode.Idle, new Vector3(2f, 1.6f, 2.5f), detector, true);
-        CreateTarget("Target_Back", targetsRoot.transform, userHead, DemoAvatarMoveMode.BackApproach, new Vector3(0f, 1.6f, -5f), detector);
+        CreateTarget("Target_Approach", targetsRoot.transform, userHead, DemoAvatarMoveMode.ApproachUser, new Vector3(0f, 1.6f, 5f), detector, trialController);
+        CreateTarget("Target_Crossing", targetsRoot.transform, userHead, DemoAvatarMoveMode.CrossInFront, new Vector3(-2f, 1.6f, 2f), detector, trialController);
+        CreateTarget("Target_Speaking", targetsRoot.transform, userHead, DemoAvatarMoveMode.Idle, new Vector3(2f, 1.6f, 2.5f), detector, trialController, true);
+        CreateTarget("Target_Back", targetsRoot.transform, userHead, DemoAvatarMoveMode.BackApproach, new Vector3(0f, 1.6f, -5f), detector, trialController);
 
         Selection.activeGameObject = systemObject;
         EditorUtility.SetDirty(systemObject);
@@ -46,6 +46,7 @@ public static class PeripheralResearchSetup
         DemoAvatarMoveMode moveMode,
         Vector3 fallbackPosition,
         PeripheralStateDetector detector,
+        PeripheralTrialController trialController,
         bool speakingDemo = false)
     {
         GameObject targetObject = GameObject.Find(targetId);
@@ -69,6 +70,7 @@ public static class PeripheralResearchSetup
         DemoAvatarMover mover = GetOrAdd<DemoAvatarMover>(targetObject);
         mover.userHead = userHead;
         mover.target = target;
+        mover.trialController = trialController;
         mover.moveMode = moveMode;
         mover.toggleSpeaking = speakingDemo;
 

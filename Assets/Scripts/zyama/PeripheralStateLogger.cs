@@ -56,6 +56,7 @@ public class PeripheralStateLogger : MonoBehaviour
     private void Update()
     {
         if (writer == null) return;
+        if (trialController != null && !trialController.IsRunning) return;
 
         if (detector == null)
         {

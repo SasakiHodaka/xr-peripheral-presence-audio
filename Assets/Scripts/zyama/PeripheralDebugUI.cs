@@ -84,12 +84,13 @@ public class PeripheralDebugUI : MonoBehaviour
             return;
         }
 
-        string line =
-            "Trial: " +
-            trialController.ElapsedSeconds.ToString("F1") +
-            " / " +
-            trialController.trialDurationSeconds.ToString("F1") +
-            "s";
+        string line;
+        if (trialController.IsComplete)
+            line = "Trial complete: " + trialController.trialDurationSeconds.ToString("F1") + "s";
+        else if (trialController.IsRunning)
+            line = "Trial: " + trialController.ElapsedSeconds.ToString("F1") + " / " + trialController.trialDurationSeconds.ToString("F1") + "s";
+        else
+            line = "Pre-trial: " + trialController.PreTrialRemainingSeconds.ToString("F1") + "s";
 
         Color color = trialController.IsComplete ? Color.green : Color.white;
         DrawLine(row, line, color);
