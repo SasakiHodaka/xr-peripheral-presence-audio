@@ -12,6 +12,7 @@
 - Git LFS `3.7.1`
 - .NET SDK `8.0.421`, optional but useful for C# tooling
 - Visual Studio 2022 Community with Unity game development workload
+- .NET Framework 4.7.1 Developer Pack / Targeting Pack for Visual Studio and MSBuild reference assemblies
 
 ## Install / Verification
 
@@ -27,6 +28,12 @@ If PATH has not refreshed yet, use:
 ```powershell
 & "C:\Program Files\Git\cmd\git.exe" --version
 & "C:\Program Files\dotnet\dotnet.exe" --version
+```
+
+Verify the .NET Framework 4.7.1 reference assemblies:
+
+```powershell
+Test-Path "C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.1\mscorlib.dll"
 ```
 
 ## Git Setup After Installing Git
@@ -51,7 +58,7 @@ The primary compile check for this Unity project is Unity batch mode:
 & "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\acd-pc67\My project" -logFile "C:\Users\acd-pc67\My project\Logs\PeripheralCompileCheck.log"
 ```
 
-Direct `dotnet build Assembly-CSharp.csproj` may require the `.NET Framework 4.7.1` targeting pack because Unity generates a non-SDK-style .NET Framework project.
+Unity batch mode is the authoritative compile check. Do not treat direct `MSBuild.exe "My project.sln"` as the project health check; Unity generated projects can fail outside the Unity compiler because of Unity-specific `NoStdLib` and NetStandard shim references.
 
 ## Unity Setup Check
 

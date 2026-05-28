@@ -49,6 +49,9 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - `radialSpeed`: Positive value means the target is approaching.
 - `lateralSpeed`: Sideways movement speed in user-local space.
 - `localX`, `localY`, `localZ`: Target position in user-head local coordinates.
+- `cueType`: Predicted cue category from `PeripheralCueModel`.
+- `presenceScore`: Predicted peripheral presence strength.
+- `volumeGain`: Predicted audio gain to use when the cue is played.
 
 ## Initial Metrics To Inspect
 

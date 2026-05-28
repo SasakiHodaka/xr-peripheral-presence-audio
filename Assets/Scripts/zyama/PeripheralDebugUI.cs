@@ -7,6 +7,7 @@ public class PeripheralDebugUI : MonoBehaviour
     public PeripheralStateDetector detector;
     public PeripheralTrialController trialController;
     public PeripheralTrialConditionController conditionController;
+    public PeripheralCueModel cueModel;
 
     [Header("UI")]
     public bool showDebugUI = true;
@@ -25,6 +26,9 @@ public class PeripheralDebugUI : MonoBehaviour
 
         if (conditionController == null)
             conditionController = GetComponent<PeripheralTrialConditionController>();
+
+        if (cueModel == null)
+            cueModel = GetComponent<PeripheralCueModel>();
     }
 
     private void InitStyles()
@@ -71,11 +75,14 @@ public class PeripheralDebugUI : MonoBehaviour
         for (int i = 0; i < visibleRows; i++)
         {
             PeripheralDetectionResult result = results[i];
+            PeripheralCuePrediction cue = cueModel != null ? cueModel.Predict(result) : new PeripheralCuePrediction();
             string line =
                 result.targetId +
                 " | " + result.state +
                 " | dist " + result.distance.ToString("F2") +
-                " | angle " + result.viewAngle.ToString("F1");
+                " | angle " + result.viewAngle.ToString("F1") +
+                " | cue " + cue.cueType +
+                " " + cue.presenceScore.ToString("F2");
 
             DrawLine(i + 4, line, GetStateColor(result.state));
         }

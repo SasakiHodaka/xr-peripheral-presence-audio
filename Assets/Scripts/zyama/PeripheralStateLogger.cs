@@ -9,6 +9,7 @@ public class PeripheralStateLogger : MonoBehaviour
     [Header("References")]
     public PeripheralStateDetector detector;
     public PeripheralTrialController trialController;
+    public PeripheralCueModel cueModel;
 
     [Header("Experiment")]
     public string participantId = "P001";
@@ -41,13 +42,16 @@ public class PeripheralStateLogger : MonoBehaviour
 
         if (trialController == null)
             trialController = GetComponent<PeripheralTrialController>();
+
+        if (cueModel == null)
+            cueModel = GetComponent<PeripheralCueModel>();
     }
 
     private void Start()
     {
         filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        writer.WriteLine("participantId,conditionLabel,trialId,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ");
+        writer.WriteLine("participantId,conditionLabel,trialId,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,cueType,presenceScore,volumeGain");
         writer.Flush();
 
         Debug.Log("Peripheral CSV created: " + filePath);
@@ -167,6 +171,8 @@ public class PeripheralStateLogger : MonoBehaviour
         if (!logNoneState && result.state == PeripheralState.None)
             return;
 
+        PeripheralCuePrediction cue = cueModel != null ? cueModel.Predict(result) : new PeripheralCuePrediction();
+
         string line = string.Join(",",
             Escape(participantId),
             Escape(conditionLabel),
@@ -188,7 +194,10 @@ public class PeripheralStateLogger : MonoBehaviour
             result.lateralSpeed.ToString("F3", CultureInfo.InvariantCulture),
             result.userLocalPosition.x.ToString("F3", CultureInfo.InvariantCulture),
             result.userLocalPosition.y.ToString("F3", CultureInfo.InvariantCulture),
-            result.userLocalPosition.z.ToString("F3", CultureInfo.InvariantCulture)
+            result.userLocalPosition.z.ToString("F3", CultureInfo.InvariantCulture),
+            cue.cueType.ToString(),
+            cue.presenceScore.ToString("F3", CultureInfo.InvariantCulture),
+            cue.volumeGain.ToString("F3", CultureInfo.InvariantCulture)
         );
 
         writer.WriteLine(line);

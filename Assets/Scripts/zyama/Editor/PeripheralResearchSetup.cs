@@ -16,15 +16,18 @@ public static class PeripheralResearchSetup
 
         GameObject systemObject = GetOrCreateRoot("PeripheralSystem");
         PeripheralStateDetector detector = GetOrAdd<PeripheralStateDetector>(systemObject);
+        PeripheralCueModel cueModel = GetOrAdd<PeripheralCueModel>(systemObject);
         PeripheralStateLogger logger = GetOrAdd<PeripheralStateLogger>(systemObject);
         PeripheralTrialController trialController = GetOrAdd<PeripheralTrialController>(systemObject);
         PeripheralTrialConditionController conditionController = GetOrAdd<PeripheralTrialConditionController>(systemObject);
         PeripheralDebugUI debugUI = GetOrAdd<PeripheralDebugUI>(systemObject);
         logger.detector = detector;
+        logger.cueModel = cueModel;
         logger.trialController = trialController;
         conditionController.detector = detector;
         conditionController.logger = logger;
         debugUI.detector = detector;
+        debugUI.cueModel = cueModel;
         debugUI.trialController = trialController;
         debugUI.conditionController = conditionController;
         detector.userHead = userHead;
