@@ -127,6 +127,9 @@ Next components:
 | RGB-D, echo, pose based acoustic estimation | Few-Shot Audio-Visual Learning of Environment Acoustics |
 | Source-receiver RIR prediction | Few-Shot RIR / NAF |
 | Audio-visual spatial understanding | SoundSpaces audio-visual navigation |
+| Peripheral awareness through spatial audio | VRBubble |
+| Functional sound for human-robot awareness | Consequential and Functional Sound in HRI |
+| Spatial computing / HRC framing | Spatial Computing and Intuitive Interaction |
 | Speaking-condition presence enhancement | Audio2Face |
 | Unity peripheral cue control | Current `PeripheralCueModel` and future `EnvironmentAcousticProfile` |
 

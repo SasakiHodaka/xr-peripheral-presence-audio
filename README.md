@@ -102,6 +102,7 @@ Audio2Face is treated as an optional extension for the `Speaking` condition, whe
 - `PERIPHERAL_RESEARCH.md`: Unity demo flow, CSV format, trial conditions, and analysis script usage.
 - `NAF_RESEARCH_PLAN.md`: NAF-inspired interpretation and boundaries for this project.
 - `RESEARCH_ROADMAP.md`: consolidated research plan and mapping to related work.
+- `LITERATURE_PRIORITIES.md`: prioritized related work across acoustics, SoundSpaces, XR, HRI, CPS, and multimodal learning.
 - `ENVIRONMENT.md`: local Unity and tooling setup.
 
 ## References
