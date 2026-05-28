@@ -141,6 +141,27 @@ It should be treated as an optional later extension for the `Speaking` condition
 - stronger speaking-person presence cues
 - multimodal cue presentation
 
+## References
+
+### Core References
+
+- Sagnik Majumder, Changan Chen, Ziad Al-Halah, Kristen Grauman. **Few-Shot Audio-Visual Learning of Environment Acoustics**. NeurIPS 2022.  
+  https://proceedings.neurips.cc/paper_files/paper/2022/hash/113ae3a9762ca2168f860a8501d6ae25-Abstract-Conference.html
+
+- Changan Chen, Carl Schissler, Sanchit Garg, Philip Kobernik, Alexander Clegg, Paul Calamia, Dhruv Batra, Philip W. Robinson, Kristen Grauman. **SoundSpaces 2.0: A Simulation Platform for Visual-Acoustic Learning**. NeurIPS 2022 Datasets and Benchmarks.  
+  https://arxiv.org/abs/2206.08312
+
+- Changan Chen, Unnat Jain, Carl Schissler, Sebastia Vicenc Amengual Gari, Ziad Al-Halah, Vamsi Krishna Ithapu, Philip Robinson, Kristen Grauman. **SoundSpaces: Audio-Visual Navigation in 3D Environments**. ECCV 2020 / arXiv.  
+  https://arxiv.org/abs/1912.11474
+
+### Conceptual References
+
+- Andrew Luo, Yilun Du, Michael J. Tarr, Joshua B. Tenenbaum, Antonio Torralba, Vincent Sitzmann. **Learning Neural Acoustic Fields**. NeurIPS 2022.  
+  https://arxiv.org/abs/2204.00628
+
+- NVIDIA. **Omniverse Audio2Face Documentation**.  
+  https://docs.omniverse.nvidia.com/audio2face/latest/overview_external.html
+
 ## Development Steps
 
 ### Step 1: Finish the Unity cue layer
@@ -260,4 +281,3 @@ VR experience evaluation:
 - perceived naturalness
 - discomfort
 - immersion
-

@@ -104,6 +104,14 @@ Audio2Face is treated as an optional extension for the `Speaking` condition, whe
 - `RESEARCH_ROADMAP.md`: consolidated research plan and mapping to related work.
 - `ENVIRONMENT.md`: local Unity and tooling setup.
 
+## References
+
+- Majumder, S., Chen, C., Al-Halah, Z., & Grauman, K. **Few-Shot Audio-Visual Learning of Environment Acoustics**. NeurIPS 2022. https://proceedings.neurips.cc/paper_files/paper/2022/hash/113ae3a9762ca2168f860a8501d6ae25-Abstract-Conference.html
+- Chen, C., Jain, U., Schissler, C., Gari, S. V. A., Al-Halah, Z., Ithapu, V. K., Robinson, P., & Grauman, K. **SoundSpaces: Audio-Visual Navigation in 3D Environments**. ECCV 2020 / arXiv. https://arxiv.org/abs/1912.11474
+- Chen, C., Schissler, C., Garg, S., Kobernik, P., Clegg, A., Calamia, P., Batra, D., Robinson, P. W., & Grauman, K. **SoundSpaces 2.0: A Simulation Platform for Visual-Acoustic Learning**. NeurIPS 2022 Datasets and Benchmarks. https://arxiv.org/abs/2206.08312
+- Luo, A., Du, Y., Tarr, M. J., Tenenbaum, J. B., Torralba, A., & Sitzmann, V. **Learning Neural Acoustic Fields**. NeurIPS 2022. https://arxiv.org/abs/2204.00628
+- NVIDIA. **Omniverse Audio2Face Documentation**. https://docs.omniverse.nvidia.com/audio2face/latest/overview_external.html
+
 ## Compile Check
 
 Use Unity batch mode as the authoritative compile check:
@@ -111,4 +119,3 @@ Use Unity batch mode as the authoritative compile check:
 ```powershell
 & "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\acd-pc67\My project" -logFile "C:\Users\acd-pc67\My project\Logs\PeripheralCompileCheck.log"
 ```
-
