@@ -39,6 +39,11 @@ public class PeripheralTrialController : MonoBehaviour
 
     private void OnEnable()
     {
+        RestartTrial();
+    }
+
+    public void RestartTrial()
+    {
         startTime = Time.time;
         started = preTrialSeconds <= 0f;
         completed = false;

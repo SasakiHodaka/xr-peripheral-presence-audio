@@ -240,3 +240,73 @@ Unity PeripheralCueModel for implementation
 
 Audio2Face remains a later optional extension for the `Speaking` condition, not the core environment acoustics pipeline.
 
+## Method Selection Decision
+
+NAF-style methods are currently background references only. The project should not use NAF as the first AI training target.
+
+Selected core method:
+
+```text
+Few-Shot Audio-Visual Learning of Environment Acoustics
+```
+
+Reason:
+
+- It is the closest match to the desired estimator:
+
+```text
+RGB-D / echo / pose / source-listener query
+-> environment acoustics
+-> compact environmentAcousticProfile
+```
+
+- It supports few-shot adaptation to new environments, which matches a realistic XR setting better than training a full scene-specific acoustic field.
+- Its target output, RIR or RIR-derived acoustic parameters, can be simplified into Unity-facing values:
+  - `rt60`
+  - `drr`
+  - `reverbAmount`
+  - `occlusionStrength`
+  - `distanceAttenuation`
+  - `lowPassHz`
+
+Selected data generation method:
+
+```text
+SoundSpaces 2.0
+```
+
+Reason:
+
+- It provides the most suitable simulation path for creating paired visual-acoustic data.
+- It supports arbitrary source/listener sampling, material configuration, and geometry-based audio rendering.
+- It can generate the training labels needed by the selected estimator, including RIR-like targets and acoustic metadata.
+
+Selected cue-design reference:
+
+```text
+VRBubble + Functional Sound in HRI
+```
+
+Reason:
+
+- VRBubble directly supports peripheral avatar awareness through spatial audio.
+- Functional HRI sound work supports the argument that designed spatial sound can communicate task-relevant presence information without relying only on visual attention.
+
+Practical project choice:
+
+```text
+SoundSpaces 2.0 dataset
+-> Few-Shot-style environment estimator
+-> EnvironmentAcousticProfile
+-> Unity PeripheralCueModel / PeripheralCueAudioEmitter
+```
+
+First AI version should not predict full RIR in Unity. It should predict compact cue-control parameters first:
+
+```text
+distance, direction, state flags, room/acoustic metadata
+-> cueType, presenceScore, volumeGain, lowPassHz, reverbAmount, occlusionStrength
+```
+
+This gives an early trainable system while preserving a clean path toward full RIR or richer acoustic prediction later.
+

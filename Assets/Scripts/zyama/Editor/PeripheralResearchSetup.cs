@@ -17,17 +17,32 @@ public static class PeripheralResearchSetup
         GameObject systemObject = GetOrCreateRoot("PeripheralSystem");
         PeripheralStateDetector detector = GetOrAdd<PeripheralStateDetector>(systemObject);
         PeripheralCueModel cueModel = GetOrAdd<PeripheralCueModel>(systemObject);
+        EnvironmentAcousticProfile environmentProfile = GetOrAdd<EnvironmentAcousticProfile>(systemObject);
+        PeripheralCueAudioEmitter audioEmitter = GetOrAdd<PeripheralCueAudioEmitter>(systemObject);
         PeripheralStateLogger logger = GetOrAdd<PeripheralStateLogger>(systemObject);
         PeripheralTrialController trialController = GetOrAdd<PeripheralTrialController>(systemObject);
         PeripheralTrialConditionController conditionController = GetOrAdd<PeripheralTrialConditionController>(systemObject);
+        PeripheralAuiLogCollectionController auiLogController = GetOrAdd<PeripheralAuiLogCollectionController>(systemObject);
         PeripheralDebugUI debugUI = GetOrAdd<PeripheralDebugUI>(systemObject);
         logger.detector = detector;
         logger.cueModel = cueModel;
+        logger.audioEmitter = audioEmitter;
         logger.trialController = trialController;
+        cueModel.environmentProfile = environmentProfile;
+        audioEmitter.detector = detector;
+        audioEmitter.cueModel = cueModel;
+        AssignDefaultClips(audioEmitter);
         conditionController.detector = detector;
         conditionController.logger = logger;
+        auiLogController.cueModel = cueModel;
+        auiLogController.environmentProfile = environmentProfile;
+        auiLogController.conditionController = conditionController;
+        auiLogController.trialController = trialController;
+        auiLogController.logger = logger;
         debugUI.detector = detector;
         debugUI.cueModel = cueModel;
+        debugUI.audioEmitter = audioEmitter;
+        debugUI.auiLogController = auiLogController;
         debugUI.trialController = trialController;
         debugUI.conditionController = conditionController;
         detector.userHead = userHead;
@@ -45,6 +60,18 @@ public static class PeripheralResearchSetup
         EditorUtility.SetDirty(systemObject);
         EditorUtility.SetDirty(targetsRoot);
         Debug.Log("Peripheral research demo hierarchy created. Assign XR Origin/Main Camera to PeripheralStateDetector.userHead if it is empty.");
+    }
+
+    private static void AssignDefaultClips(PeripheralCueAudioEmitter audioEmitter)
+    {
+        if (audioEmitter.footstepClip == null)
+            audioEmitter.footstepClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/freesound_community-footsteps-concrete-26375.mp3");
+
+        if (audioEmitter.ambientPresenceClip == null)
+            audioEmitter.ambientPresenceClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/freesound_community-clothing-rustles-107170.mp3");
+
+        if (audioEmitter.voiceClip == null)
+            audioEmitter.voiceClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/「よろしくお願いします」.mp3");
     }
 
     private static PeripheralTarget CreateTarget(

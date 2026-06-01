@@ -8,6 +8,8 @@ public class PeripheralDebugUI : MonoBehaviour
     public PeripheralTrialController trialController;
     public PeripheralTrialConditionController conditionController;
     public PeripheralCueModel cueModel;
+    public PeripheralCueAudioEmitter audioEmitter;
+    public PeripheralAuiLogCollectionController auiLogController;
 
     [Header("UI")]
     public bool showDebugUI = true;
@@ -29,6 +31,12 @@ public class PeripheralDebugUI : MonoBehaviour
 
         if (cueModel == null)
             cueModel = GetComponent<PeripheralCueModel>();
+
+        if (audioEmitter == null)
+            audioEmitter = GetComponent<PeripheralCueAudioEmitter>();
+
+        if (auiLogController == null)
+            auiLogController = GetComponent<PeripheralAuiLogCollectionController>();
     }
 
     private void InitStyles()
@@ -51,7 +59,7 @@ public class PeripheralDebugUI : MonoBehaviour
 
         InitStyles();
 
-        GUI.Box(new Rect(10, 10, 760, 260), "Peripheral Debug", boxStyle);
+        GUI.Box(new Rect(10, 10, 760, 430), "Peripheral Debug", boxStyle);
 
         if (detector == null)
         {
@@ -68,29 +76,48 @@ public class PeripheralDebugUI : MonoBehaviour
         IReadOnlyList<PeripheralDetectionResult> results = detector.LatestResults;
         DrawLine(0, "User Head: " + detector.userHead.name, Color.white);
         DrawLine(1, "Condition: " + GetConditionLabel(), Color.white);
-        DrawLine(2, "Targets: " + detector.targets.Count + " / Results: " + results.Count, Color.white);
-        DrawTrialLine(3);
+        DrawLine(2, "Cue: " + GetCueConditionLabel(), Color.white);
+        DrawLine(3, "AUI Trial: " + GetAuiTrialLabel(), Color.white);
+        DrawLine(4, "Targets: " + detector.targets.Count + " / Results: " + results.Count, Color.white);
+        DrawTrialLine(5);
 
         int visibleRows = Mathf.Min(results.Count, 5);
         for (int i = 0; i < visibleRows; i++)
         {
             PeripheralDetectionResult result = results[i];
             PeripheralCuePrediction cue = cueModel != null ? cueModel.Predict(result) : new PeripheralCuePrediction();
+            PeripheralCuePlaybackState playback = audioEmitter != null ? audioEmitter.GetPlaybackState(result.targetId) : new PeripheralCuePlaybackState();
             string line =
                 result.targetId +
                 " | " + result.state +
                 " | dist " + result.distance.ToString("F2") +
                 " | angle " + result.viewAngle.ToString("F1") +
                 " | cue " + cue.cueType +
-                " " + cue.presenceScore.ToString("F2");
+                " " + cue.presenceScore.ToString("F2") +
+                " | audio " + playback.outputVolume.ToString("F2") +
+                " lp " + playback.lowPassHz.ToString("F0") +
+                " rv " + playback.reverbAmount.ToString("F2");
 
-            DrawLine(i + 4, line, GetStateColor(result.state));
+            DrawLine(i + 6, line, GetStateColor(result.state));
         }
     }
 
     private string GetConditionLabel()
     {
         return conditionController != null ? conditionController.condition.ToString() : "(none)";
+    }
+
+    private string GetCueConditionLabel()
+    {
+        return cueModel != null ? cueModel.comparisonCondition.ToString() : "(none)";
+    }
+
+    private string GetAuiTrialLabel()
+    {
+        if (auiLogController == null)
+            return "(manual)";
+
+        return (auiLogController.CurrentTrialIndex + 1) + " / " + auiLogController.TotalTrialCount;
     }
 
     private void DrawTrialLine(int row)

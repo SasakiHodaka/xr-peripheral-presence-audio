@@ -33,6 +33,14 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - `participantId`: Participant identifier set on `PeripheralStateLogger`.
 - `conditionLabel`: Experimental condition label set on `PeripheralStateLogger`.
 - `trialId`: Trial identifier set on `PeripheralStateLogger`.
+- `cueCondition`: Cue comparison mode from `PeripheralCueModel`: `NoCue`, `FixedCue`, `StateBasedCue`, or `EnvironmentAdaptiveCue`.
+- `roomScale`: Current `EnvironmentAcousticProfile.roomScale`.
+- `materialClass`: Current `EnvironmentAcousticProfile.materialClass`.
+- `environmentReverbAmount`: Current manual environment reverb value.
+- `environmentOcclusionStrength`: Current manual environment occlusion strength.
+- `environmentDistanceAttenuation`: Current manual environment distance attenuation.
+- `environmentRt60`: Current manual RT60 value.
+- `environmentDrr`: Current manual DRR value.
 - `time`: Unity play time in seconds.
 - `trialElapsed`: Elapsed trial time from `PeripheralTrialController`.
 - `trialDuration`: Expected trial length from `PeripheralTrialController`.
@@ -52,6 +60,14 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - `cueType`: Predicted cue category from `PeripheralCueModel`.
 - `presenceScore`: Predicted peripheral presence strength.
 - `volumeGain`: Predicted audio gain to use when the cue is played.
+- `cueLowPassHz`: Low-pass cutoff predicted by `PeripheralCueModel` and `EnvironmentAcousticProfile`.
+- `cueReverbAmount`: Reverb amount predicted by `PeripheralCueModel` and `EnvironmentAcousticProfile`.
+- `cueOcclusionGain`: Occlusion gain predicted by `PeripheralCueModel` and `EnvironmentAcousticProfile`.
+- `playbackActive`: Whether `PeripheralCueAudioEmitter` currently considers the cue audible.
+- `playbackVolume`: Actual target output volume after base gain scaling.
+- `playbackLowPassHz`: Current low-pass cutoff used for spatial/rear/far cue filtering.
+- `playbackReverbAmount`: Current reverb amount used for cue playback.
+- `footstepInterval`: Current interval used for footstep one-shot playback.
 
 ## Initial Metrics To Inspect
 
@@ -163,6 +179,42 @@ python Tools/analyze_peripheral_csv.py --html-report --log-dir "C:\path\to\logs"
 ```
 
 The script prints per-target row counts, state counts, first detection times, `outOfView + approaching` counts, and the time from first `approaching` to first `near`.
+
+## AI Training Dataset
+
+Build the first compact cue-control training dataset with:
+
+```powershell
+python Tools/build_cue_training_dataset.py
+```
+
+This writes:
+
+```text
+cue_training_dataset.csv
+```
+
+The first model should predict `cueType`, `presenceScore`, `volumeGain`, `cueLowPassHz`, `cueReverbAmount`, and `cueOcclusionGain` from target state, distance, speed, and local position columns.
+
+Use `cueCondition` to separate fixed, state-based, and environment-adaptive cue rows during baseline training and evaluation.
+
+## AUI Log Collection Controller
+
+`PeripheralAuiLogCollectionController` automates AUI dataset collection.
+
+It cycles through:
+
+- target scenarios: `Approach`, `BackApproach`, `Crossing`, `Speaking`
+- cue conditions: `NoCue`, `FixedCue`, `StateBasedCue`, `EnvironmentAdaptiveCue`
+- environment presets: `Neutral`, `Reverberant`, `Occluded`
+
+Use it by running:
+
+```text
+Tools > Peripheral Research > Create Demo Hierarchy
+```
+
+Then select `PeripheralSystem` and enable `PeripheralAuiLogCollectionController.autoAdvanceTrials` if you want one Play Mode session to advance across all configured trials. The logger writes the combined condition into `conditionLabel` and writes the cue condition and environment profile values into dedicated CSV columns.
 
 ## Current Scope
 

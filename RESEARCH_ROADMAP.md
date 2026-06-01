@@ -12,6 +12,10 @@ environment acoustics estimation
 
 The immediate implementation target is not a full neural acoustic field. The first target is an explainable Unity system that can play and log adaptive audio cues for peripheral presence. The learning components should later replace or condition parts of that cue system.
 
+The concrete study design is defined in `RESEARCH_DESIGN.md`. Implementation work should support that document's research question, cue conditions, target scenarios, and dependent measures before expanding the AI scope.
+
+The follow-on project is defined in `SECOND_PROJECT_RESEARCH_DESIGN.md`. It should validate multimodal situation inference and adaptive feedback before expanding into full multimodal CPS.
+
 ## Layer 1: Environment Acoustics Estimation
 
 Goal:
@@ -45,7 +49,7 @@ Use in this project:
   - `rt60`
   - `drr`
 
-NAF-related work is useful as a reference concept for source/listener acoustic fields, but it should not be the first implementation target.
+NAF-related work is useful as a reference concept for source/listener acoustic fields, but it is not the selected first AI method. The first AI method should follow Few-Shot Audio-Visual Learning of Environment Acoustics, with SoundSpaces 2.0 used to generate the required audio-visual training data.
 
 ## Layer 2: Audio-Visual Learning
 
@@ -167,6 +171,19 @@ It should be treated as an optional later extension for the `Speaking` condition
 
 ## Development Steps
 
+### Step 0: Selected AI method
+
+Use:
+
+```text
+SoundSpaces 2.0 dataset generation
+-> Few-Shot-style environment acoustics estimator
+-> compact EnvironmentAcousticProfile
+-> Unity cue control
+```
+
+Do not start with NAF. Do not train a full neural acoustic field until the compact estimator has been validated.
+
 ### Step 1: Finish the Unity cue layer
 
 Implement:
@@ -209,6 +226,11 @@ Conditions:
 Purpose:
 
 - compare whether adaptive cues improve awareness, localization, naturalness, and immersion.
+
+Current Unity status:
+
+- `PeripheralCueModel.comparisonCondition` switches these cue-control modes.
+- `cueCondition` is written to CSV and included in the first cue-training dataset.
 
 ### Step 4: Define simulation dataset schema
 

@@ -11,18 +11,22 @@ The current Unity prototype detects peripheral target states and predicts lightw
 Implemented components:
 
 - `PeripheralStateDetector`: detects target state flags such as `OutOfView`, `Approaching`, `Speaking`, `Gazing`, `Near`, and `Crossing`.
+- `EnvironmentAcousticProfile`: stores compact room/acoustic parameters that can later be predicted by an AI estimator.
 - `PeripheralCueModel`: predicts `cueType`, `presenceScore`, and `volumeGain` from each detection result.
+- `PeripheralCueAudioEmitter`: plays predicted cue types as target-attached 3D audio.
 - `PeripheralStateLogger`: writes target state and cue predictions to CSV.
 - `PeripheralDebugUI`: shows target state and cue predictions in Play Mode.
 - `PeripheralTrialController`: controls pre-trial and trial timing.
 - `PeripheralTrialConditionController`: switches demo conditions such as approach, back approach, crossing, speaking, and none.
+- `PeripheralAuiLogCollectionController`: cycles target scenarios, cue conditions, and environment presets for AUI training logs.
+- `PeripheralCueModel.comparisonCondition`: switches `NoCue`, `FixedCue`, `StateBasedCue`, and `EnvironmentAdaptiveCue` cue-control modes.
 
 Current cue flow:
 
 ```text
 target state + distance + speed
--> cueType, presenceScore, volumeGain
--> CSV + debug UI
+-> cueType, presenceScore, volumeGain, lowPassHz, reverbAmount, occlusionGain
+-> 3D audio playback + CSV + debug UI
 ```
 
 Next Unity target:
@@ -87,9 +91,9 @@ Audio2Face is treated as an optional extension for the `Speaking` condition, whe
 ## Development Roadmap
 
 1. Stabilize the current state detection and cue prediction layer.
-2. Add `PeripheralCueAudioEmitter` to play predicted cue types as 3D audio.
-3. Extend logs with actual playback parameters.
-4. Add a manual `EnvironmentAcousticProfile` for early environment-adaptive cue tests.
+2. Stabilize `PeripheralCueAudioEmitter` clip mapping and playback timing in trial scenes.
+3. Extend analysis metrics with actual playback parameters.
+4. Collect Unity CSV logs and build the first cue-control training dataset.
 5. Add comparison conditions: `NoCue`, `FixedCue`, `StateBasedCue`, and `EnvironmentAdaptiveCue`.
 6. Build the simulation data schema for dry/wet audio, source/listener pose, RGB-D, RIR, and room metadata.
 7. Pre-train audio-visual-position encoders with self-supervised tasks.
@@ -100,6 +104,12 @@ Audio2Face is treated as an optional extension for the `Speaking` condition, whe
 ## Documentation
 
 - `PERIPHERAL_RESEARCH.md`: Unity demo flow, CSV format, trial conditions, and analysis script usage.
+- `RESEARCH_DESIGN.md`: research question, hypotheses, experimental conditions, metrics, and study plan.
+- `SECOND_PROJECT_RESEARCH_DESIGN.md`: follow-on project design that bridges XR adaptive feedback to multimodal CPS.
+- `AUI_TRAINING_REPORT.md`: latest cue-control learning pipeline result and next training steps.
+- `PROGRESS_REPORT_AUI.md`: concise progress-report text for the current AUI learning implementation.
+- `AUI_PROGRESS_PRESENTATION_DRAFT.md`: slide-by-slide draft and Q&A for the next progress report.
+- `CURRENT_PROGRESS_REPORT.md`: integrated current progress report across research design, Unity implementation, and AUI learning.
 - `NAF_RESEARCH_PLAN.md`: NAF-inspired interpretation and boundaries for this project.
 - `RESEARCH_ROADMAP.md`: consolidated research plan and mapping to related work.
 - `LITERATURE_PRIORITIES.md`: prioritized related work across acoustics, SoundSpaces, XR, HRI, CPS, and multimodal learning.

@@ -10,6 +10,7 @@ public class PeripheralStateLogger : MonoBehaviour
     public PeripheralStateDetector detector;
     public PeripheralTrialController trialController;
     public PeripheralCueModel cueModel;
+    public PeripheralCueAudioEmitter audioEmitter;
 
     [Header("Experiment")]
     public string participantId = "P001";
@@ -45,13 +46,16 @@ public class PeripheralStateLogger : MonoBehaviour
 
         if (cueModel == null)
             cueModel = GetComponent<PeripheralCueModel>();
+
+        if (audioEmitter == null)
+            audioEmitter = GetComponent<PeripheralCueAudioEmitter>();
     }
 
     private void Start()
     {
         filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        writer.WriteLine("participantId,conditionLabel,trialId,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,cueType,presenceScore,volumeGain");
+        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,cueType,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
         writer.Flush();
 
         Debug.Log("Peripheral CSV created: " + filePath);
@@ -172,11 +176,20 @@ public class PeripheralStateLogger : MonoBehaviour
             return;
 
         PeripheralCuePrediction cue = cueModel != null ? cueModel.Predict(result) : new PeripheralCuePrediction();
+        PeripheralCuePlaybackState playback = audioEmitter != null ? audioEmitter.GetPlaybackState(result.targetId) : new PeripheralCuePlaybackState();
 
         string line = string.Join(",",
             Escape(participantId),
             Escape(conditionLabel),
             Escape(trialId),
+            Escape(GetCueConditionLabel()),
+            GetRoomScale().ToString("F3", CultureInfo.InvariantCulture),
+            Escape(GetMaterialClassLabel()),
+            GetEnvironmentReverbAmount().ToString("F3", CultureInfo.InvariantCulture),
+            GetEnvironmentOcclusionStrength().ToString("F3", CultureInfo.InvariantCulture),
+            GetEnvironmentDistanceAttenuation().ToString("F3", CultureInfo.InvariantCulture),
+            GetEnvironmentRt60().ToString("F3", CultureInfo.InvariantCulture),
+            GetEnvironmentDrr().ToString("F3", CultureInfo.InvariantCulture),
             Time.time.ToString("F3", CultureInfo.InvariantCulture),
             GetTrialElapsed().ToString("F3", CultureInfo.InvariantCulture),
             GetTrialDuration().ToString("F3", CultureInfo.InvariantCulture),
@@ -197,10 +210,70 @@ public class PeripheralStateLogger : MonoBehaviour
             result.userLocalPosition.z.ToString("F3", CultureInfo.InvariantCulture),
             cue.cueType.ToString(),
             cue.presenceScore.ToString("F3", CultureInfo.InvariantCulture),
-            cue.volumeGain.ToString("F3", CultureInfo.InvariantCulture)
+            cue.volumeGain.ToString("F3", CultureInfo.InvariantCulture),
+            cue.lowPassHz.ToString("F0", CultureInfo.InvariantCulture),
+            cue.reverbAmount.ToString("F3", CultureInfo.InvariantCulture),
+            cue.occlusionGain.ToString("F3", CultureInfo.InvariantCulture),
+            playback.playbackActive,
+            playback.outputVolume.ToString("F3", CultureInfo.InvariantCulture),
+            playback.lowPassHz.ToString("F0", CultureInfo.InvariantCulture),
+            playback.reverbAmount.ToString("F3", CultureInfo.InvariantCulture),
+            playback.footstepInterval.ToString("F3", CultureInfo.InvariantCulture)
         );
 
         writer.WriteLine(line);
+    }
+
+    private string GetCueConditionLabel()
+    {
+        return cueModel != null ? cueModel.comparisonCondition.ToString() : string.Empty;
+    }
+
+    private EnvironmentAcousticProfile GetEnvironmentProfile()
+    {
+        return cueModel != null ? cueModel.environmentProfile : null;
+    }
+
+    private float GetRoomScale()
+    {
+        EnvironmentAcousticProfile profile = GetEnvironmentProfile();
+        return profile != null ? profile.roomScale : 1f;
+    }
+
+    private string GetMaterialClassLabel()
+    {
+        EnvironmentAcousticProfile profile = GetEnvironmentProfile();
+        return profile != null ? profile.materialClass.ToString() : string.Empty;
+    }
+
+    private float GetEnvironmentReverbAmount()
+    {
+        EnvironmentAcousticProfile profile = GetEnvironmentProfile();
+        return profile != null ? profile.reverbAmount : 0f;
+    }
+
+    private float GetEnvironmentOcclusionStrength()
+    {
+        EnvironmentAcousticProfile profile = GetEnvironmentProfile();
+        return profile != null ? profile.occlusionStrength : 0f;
+    }
+
+    private float GetEnvironmentDistanceAttenuation()
+    {
+        EnvironmentAcousticProfile profile = GetEnvironmentProfile();
+        return profile != null ? profile.distanceAttenuation : 0f;
+    }
+
+    private float GetEnvironmentRt60()
+    {
+        EnvironmentAcousticProfile profile = GetEnvironmentProfile();
+        return profile != null ? profile.rt60 : 0f;
+    }
+
+    private float GetEnvironmentDrr()
+    {
+        EnvironmentAcousticProfile profile = GetEnvironmentProfile();
+        return profile != null ? profile.drr : 0f;
     }
 
     private float GetTrialElapsed()
