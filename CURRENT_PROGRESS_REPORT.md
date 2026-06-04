@@ -1,314 +1,185 @@
 # Current Progress Report
 
-## 研究全体の方向性
+更新日: 2026-06-04
 
-本研究の大きな目的は、新時代のインターフェースを作ることである。
+## 今週の目的
 
-具体的には、人間・環境・エージェントの状態をマルチモーダルに理解し、状況に応じて音・視覚・触覚などの提示方法を変える適応的インターフェースを目指している。
+今週は，XR空間における周辺人物への気づきを支援する気配音システムについて，被験者実験に進むためのUnity実験基盤と学習パイプラインを整備した．
 
-現在の第一段階では、XR空間における周辺人物への気づきを対象とし、視覚UIだけに頼らず、空間音響cueによって人の存在・接近・発話・移動を自然に伝える仕組みを実装している。
-
-研究の発展方向は以下である。
+実装の中心は，便利機能そのものではなく，以下の研究フローをUnity上で実行できるようにすることである．
 
 ```text
-XR周辺人物への適応的音響cue
--> AUI学習によるcue-control
--> マルチモーダル状況推定
--> 人間中心マルチモーダルCPSインターフェース
+Unityで状況パターンを生成する
+-> 各状況に複数の気配音候補を提示する
+-> 被験者実験で認知性能を測る
+-> 最も有効な音を正解ラベルにする
+-> PresenceScoreと音量補正値を数理モデルで作る
+-> そのデータでNNを学習させる
+-> 未知状況での推定性能を評価する
 ```
 
-## 現在の研究課題
+## 研究全体における位置づけ
 
-現在の中心課題は以下である。
+本作業は，研究全体のうち以下に該当する．
 
-```text
-XR空間で視野外・背後・周辺にいる人物に対して、
-どのような音響cueをどの強度・方向・音響特性で提示すれば、
-気づきやすく、かつ自然で邪魔にならないインターフェースになるか。
-```
+- 環境・行動情報の取得
+- データセット生成
+- 学習モデル構築の初期基盤
+- 被験者評価の準備
 
-このために、周辺人物の状態を検出し、状況に応じてcueを変えるAUIの基礎実装を進めている。
+まだ本番の被験者実験結果は入っていない．現在のUnityデモに入っている気配音ルールは，研究者の主観に基づく初期ルールであり，最終的な正解ラベルではない．
 
-## 実装済みのUnityシステム
+## 現在できていること
 
-現在のUnityプロトタイプでは、以下のコンポーネントを実装・整理した。
+Unity側では，周辺人物の状態を検出し，状況に応じた気配音候補を出し分け，CSVログとして保存できる．
 
-- `PeripheralStateDetector`: 周辺人物の状態を検出する。
-- `PeripheralCueModel`: 検出結果からcue種別とcue制御パラメータを予測する。
-- `PeripheralCueAudioEmitter`: cueを3D空間音響として再生する。
-- `EnvironmentAcousticProfile`: 環境音響プロファイルを保持する。
-- `PeripheralStateLogger`: 検出状態、cue予測、再生状態、環境プロファイルをCSVに記録する。
-- `PeripheralTrialController`: 試行時間とpre-trial時間を管理する。
-- `PeripheralTrialConditionController`: Approach、BackApproach、Crossing、Speakingなどの条件を切り替える。
-- `PeripheralAuiLogCollectionController`: AUI学習用に、target scenario、cue condition、environment presetを自動で組み合わせる。
-- `PeripheralDebugUI`: Play Mode中に状態、cue、AUI trial番号を確認する。
+主な実装済みコンポーネント:
 
-現在のcue条件は以下である。
+- `PeripheralStateDetector`: 周辺人物の状態を検出する．
+- `PeripheralCueModel`: `NoCue`，`FixedCue`，`StateBasedCue`，`LearnedCue`，`EnvironmentAdaptiveCue` を切り替える．
+- `PeripheralCueAudioEmitter`: 選択された気配音候補を3D音として再生する．
+- `PeripheralCueExperimentController`: 反応，方向回答，主観評価を受け取る．
+- `PeripheralCueTrialSequencer`: 状況と気配音候補の組み合わせを順番またはランダムに提示する．
+- `PeripheralStateLogger`: 状態，音，反応，方向正誤，主観評価をCSVに保存する．
+- `PeripheralDebugUI`: Play Mode中に現在の条件，候補音，反応状態を確認する．
 
-```text
-NoCue
-FixedCue
-StateBasedCue
-EnvironmentAdaptiveCue
-```
+## 入力パラメータ
 
-現在のtarget scenarioは以下である。
+今回扱う主な入力情報は以下である．
 
-```text
-Approach
-BackApproach
-Crossing
-Speaking
-```
+| 項目 | 内容 |
+| -- | -- |
+| 状況条件 | `Approach`, `BackApproach`, `Crossing`, `Speaking` |
+| 気配音候補 | `NoCue`, `Footstep`, `Breathing`, `ClothRustle`, `Voice`, `AmbientPresence`, `MixedCue` |
+| 状態特徴量 | 視野外，接近，発話，注視，近距離，横切り |
+| 幾何特徴量 | 距離，視野角，ユーザ基準の相対位置 |
+| 運動特徴量 | 接近速度，横方向速度 |
+| 被験者入力 | 検出反応，方向回答，1から5の主観評価 |
 
-環境プリセットは以下である。
+取得方法:
 
-```text
-Neutral
-Reverberant
-Occluded
-```
+Unity Play Mode上で試行を実行し，`PeripheralStateLogger` がCSVとして保存する．
 
-これにより、AUI学習用に以下の組み合わせを収集できる状態になった。
+## 出力情報
 
-```text
-target scenario
-× cue condition
-× environment preset
-```
+現在のCSVには，モデル学習と評価に必要な以下の情報を出力できる．
 
-## ログ出力の拡張
+| 項目 | 内容 |
+| -- | -- |
+| `cueCandidate` | 実験で提示した音候補 |
+| `cueType` | モデルまたはルールが出力した音種別 |
+| `presenceScore` | 周辺人物の存在感をどの程度表現するか |
+| `volumeGain` | 音量補正値 |
+| `reactionTime` | 検出反応時間 |
+| `directionResponse` | 被験者の方向回答 |
+| `directionCorrect` | 方向回答の正誤 |
+| `subjectiveRating` | 主観評価 |
 
-CSVログには、周辺人物の状態だけでなく、cue制御と環境音響プロファイルも記録するようにした。
+## 学習・解析パイプライン
 
-主な入力特徴量:
+Python側では，Unityログから学習用データセットを作成し，軽量モデルを学習し，Unityで読めるJSONモデルとして出力できる．
 
-- `outOfView`
-- `approaching`
-- `speaking`
-- `gazing`
-- `near`
-- `crossing`
-- `distance`
-- `viewAngle`
-- `radialSpeed`
-- `lateralSpeed`
-- `localX`, `localY`, `localZ`
-
-cue条件:
-
-- `cueCondition`
-
-環境特徴量:
-
-- `roomScale`
-- `materialClass`
-- `environmentReverbAmount`
-- `environmentOcclusionStrength`
-- `environmentDistanceAttenuation`
-- `environmentRt60`
-- `environmentDrr`
-
-教師ラベル・出力:
-
-- `cueType`
-- `presenceScore`
-- `volumeGain`
-- `cueLowPassHz`
-- `cueReverbAmount`
-- `cueOcclusionGain`
-
-実再生状態:
-
-- `playbackActive`
-- `playbackVolume`
-- `playbackLowPassHz`
-- `playbackReverbAmount`
-- `footstepInterval`
-
-## AUI学習パイプライン
-
-UnityログからAUI学習データセットを作成し、初期モデルを学習するパイプラインを実装した。
-
-データセット生成:
+主なコマンド:
 
 ```powershell
+python Tools/analyze_peripheral_csv.py --cue-effectiveness
+python Tools/analyze_peripheral_csv.py --label-dataset
 python Tools/build_cue_training_dataset.py --include-none
-```
-
-モデル学習:
-
-```powershell
 python Tools/train_cue_model.py --epochs 40
-```
-
-データセット確認:
-
-```powershell
 python Tools/summarize_cue_training_dataset.py
 ```
 
-出力:
+現在の既存ログを使った初期モデル結果:
+
+| 項目 | 値 |
+| -- | -- |
+| 使用ログ | 23 files |
+| 全データ数 | 16,511 rows |
+| 学習データ | 12,383 rows |
+| テストデータ | 4,128 rows |
+| `cueType` accuracy | 0.7987 |
+| `presenceScore` MAE | 0.0566 |
+| `volumeGain` MAE | 0.0566 |
+
+注意点:
+
+この結果は，現時点では研究者主観の初期ルールを学習したベースラインである．被験者実験から得られた「人間にとって有効な音」を学習した結果ではない．
+
+## 教師データ生成方法
+
+今後の本来の教師データは，被験者実験の結果から作る．
+
+現在の方針:
+
+| 条件 | 生成ラベル |
+| -- | -- |
+| 検出成功率が高い | 有効な候補音として加点 |
+| 方向正答率が高い | 状況理解に有効として加点 |
+| 反応時間が短い | 気づきやすい音として加点 |
+| 主観評価が高い | 自然さ・納得感が高い音として加点 |
+
+解析スクリプトでは，暫定的に以下の指標で `cueEffectiveness` を計算する．
 
 ```text
-cue_training_dataset.csv
-Models/cue_model.json
-cue_training_predictions.csv
+detectionSuccess
++ directionAccuracy
+- normalizedReactionTime
++ normalizedRating
 ```
 
-## 現在の学習結果
-
-既存Unityログ18本から、AUI学習用データセットを生成した。
-
-```text
-Source CSV files: 18
-Samples: 17,562
-Train rows: 13,172
-Test rows: 4,390
-```
-
-cueTypeの分布:
-
-```text
-Footstep: 12,946
-Voice: 2,264
-None: 2,104
-AmbientPresence: 248
-```
-
-初期モデルの結果:
-
-```text
-cueType test accuracy: 0.8091
-presenceScore MAE: 0.3070
-volumeGain MAE: 0.3070
-cueLowPassHz MAE: 0.0000
-cueReverbAmount MAE: 0.0000
-cueOcclusionGain MAE: 0.0000
-```
-
-この結果により、UnityログからAUI学習データセットを作成し、cueTypeとcue制御パラメータを予測する初期モデルを学習・評価・保存するところまで完了した。
+この値が最も高い音候補を，その状況の暫定的な正解ラベル候補にする．
 
 ## 現在の限界
 
-現時点の学習は、既存の古いログを利用している。
+現状で詰め切れていない点は以下である．
 
-古いログには、現在追加した以下の情報が十分に含まれていない。
+- 本番の被験者データがまだない．
+- 主観評価は現在1から5の単一評価であり，自然さ，不快感，気づきやすさを分けていない．
+- `cueEffectiveness` の式は暫定であり，実験目的に合わせて重み調整が必要である．
+- Unity上の音源素材と音量条件は，厳密な実験条件としてまだ固定し切れていない．
+- 現在の学習結果は，研究者主観ルールの再現性能であり，人間の認知性能を改善した証拠ではない．
+- Meta Audio SimulatorやSoundSpacesのような大規模音響シミュレーションは，まだ本実装には統合していない．
 
-- `cueCondition`
-- `EnvironmentAdaptiveCue`
-- 環境音響プロファイルの変化
-- low-pass、reverb、occlusionの変化
+## 次に行う作業
 
-そのため、現在の既存データでは以下が固定値になっている。
+次回は，便利機能の追加ではなく，研究結果を出すための実装に進む．
 
-```text
-cueCondition: StateBasedCue
-materialClass: Neutral
-cueLowPassHz: 22000
-cueReverbAmount: 0
-cueOcclusionGain: 1
-```
+1. 少数条件でミニ実験ログを取る．
+   - `BackApproach`
+   - `Approach`
+   - `Crossing`
+   - `Speaking`
+   - `NoCue`, `Footstep`, `Breathing`, `AmbientPresence` などを比較する．
 
-したがって、現在の学習結果は「AUI学習パイプラインが成立した初期ベースライン」であり、EnvironmentAdaptiveCueを本格的に学習できた段階ではない。
+2. `cueEffectiveness` を条件別・候補音別に集計する．
 
-## 実装上の改善点
+3. 各状況で最も有効な音をラベル候補として出力する．
 
-上記の限界を解消するために、AUIログ収集用の自動化を追加した。
+4. 研究者主観ルールと，被験者ログ由来ラベルを比較する．
 
-`PeripheralAuiLogCollectionController` により、以下を自動で組み合わせられる。
+5. ラベルデータで `LearnedCue` モデルを再学習し，`StateBasedCue` と比較する．
 
-```text
-Target scenarios:
-Approach / BackApproach / Crossing / Speaking
+## 次回の実装候補
 
-Cue conditions:
-NoCue / FixedCue / StateBasedCue / EnvironmentAdaptiveCue
+次に入れるべき実装は，UIの便利機能ではなく，評価結果を直接作る機能である．
 
-Environment presets:
-Neutral / Reverberant / Occluded
-```
+優先度が高いもの:
 
-これにより、次のログ収集では環境適応cueの教師値が変化し、以下を学習対象にできる。
+- `Tools/analyze_peripheral_csv.py` に条件別・候補音別ランキングのMarkdownレポート出力を追加する．
+- `cueCandidate` ごとの検出率，方向正答率，反応時間，主観評価，`cueEffectiveness` を表にする．
+- 各 `conditionLabel` で最良音を `isBestCue=True` として明示する．
+- `StateBasedCue` と `LearnedCue` の比較用サマリを出力する．
 
-- low-pass cutoff prediction
-- reverb amount prediction
-- occlusion gain prediction
-- environment-adaptive cue control
+## Git保存状況
 
-## 検証状況
-
-以下の確認を行った。
+直近の保存済みコミット:
 
 ```text
-python Tools/build_cue_training_dataset.py --include-none
-python Tools/train_cue_model.py --epochs 40
-python Tools/summarize_cue_training_dataset.py
+90f136a Add randomized cue trial sequencing
+510d530 Add peripheral direction accuracy logging
+b805089 Export Unity-compatible cue model
+9136b6d Fix audio emitter script guid
+313855e Document hybrid cue learning roadmap
 ```
 
-Unityのバッチコンパイルも実行し、エラーなく終了した。
-
-```text
-Exiting batchmode successfully now!
-return code 0
-```
-
-## 研究設計の整理
-
-研究設計として、以下の文書も作成した。
-
-- `RESEARCH_DESIGN.md`: 第一研究の研究課題、仮説、実験条件、評価指標。
-- `SECOND_PROJECT_RESEARCH_DESIGN.md`: 第二プロジェクトとマルチモーダルCPSへの発展計画。
-- `AI_TRAINING_SCHEMA.md`: AUI学習用データセットとモデルの設計。
-- `AUI_TRAINING_REPORT.md`: AUI学習結果の詳細。
-
-第一研究の位置づけ:
-
-```text
-適応的空間音響cueによって、
-XR空間における周辺人物への気づきを改善する。
-```
-
-第二プロジェクトの位置づけ:
-
-```text
-複数の軽量信号から人間・環境・エージェントの状態を推定し、
-状況に応じて適応フィードバックを行う。
-```
-
-最終的な発展:
-
-```text
-人間中心マルチモーダルCPSインターフェース
-```
-
-## 次に行うこと
-
-次の実装・実験準備は以下である。
-
-1. Unityで `Tools > Peripheral Research > Create Demo Hierarchy` を実行する。
-2. `PeripheralSystem` の `PeripheralAuiLogCollectionController.autoAdvanceTrials` を有効にする。
-3. `EnvironmentAdaptiveCue` を含む新規ログを収集する。
-4. `cue_training_dataset.csv` を再生成する。
-5. `Tools/train_cue_model.py` で再学習する。
-6. 環境適応パラメータの予測精度を評価する。
-
-特に次の段階では、以下を重点的に確認する。
-
-```text
-EnvironmentAdaptiveCue条件で、
-roomScale、materialClass、reverbAmount、occlusionStrength、rt60、drrの違いが
-cueLowPassHz、cueReverbAmount、cueOcclusionGainに反映され、
-それをAUIモデルが学習できるか。
-```
-
-## 報告用要約
-
-```text
-現在、XR空間で周辺人物への気づきを支援するAUIの実装を進めている。
-Unity上で人物状態を検出し、cueTypeや音量、フィルタ、残響、遮蔽などのcue制御パラメータを出力・記録する仕組みを実装した。
-さらに、UnityログからAUI学習データセットを生成し、初期モデルを学習・評価・保存するパイプラインを構築した。
-既存ログ18本から17,562サンプルを作成し、初期モデルではcueTypeのテスト精度が約0.81となった。
-現在は古いログを用いた初期ベースラインであるため、次にEnvironmentAdaptiveCueを含む新規ログを収集し、環境適応パラメータを本格的に学習する。
-```
-
+現在の作業ツリーは，この進捗メモ更新前の時点でクリーンだった．
