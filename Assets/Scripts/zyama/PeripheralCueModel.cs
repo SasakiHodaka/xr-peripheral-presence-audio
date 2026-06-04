@@ -14,6 +14,7 @@ public enum PeripheralCueComparisonCondition
     NoCue,
     FixedCue,
     StateBasedCue,
+    LearnedCue,
     EnvironmentAdaptiveCue
 }
 
@@ -42,11 +43,19 @@ public class PeripheralCueModel : MonoBehaviour
     [Header("Environment")]
     public EnvironmentAcousticProfile environmentProfile;
 
+    [Header("Learned Model")]
+    public TextAsset learnedModelJson;
+    public string learnedConditionLabel = "demo";
+    public string learnedFeatureCueCondition = "StateBasedCue";
+
     [Header("Weights")]
     [Range(0f, 1f)] public float outOfViewBoost = 0.25f;
     [Range(0f, 1f)] public float approachingBoost = 0.35f;
     [Range(0f, 1f)] public float speakingBoost = 0.35f;
     [Range(0f, 1f)] public float crossingBoost = 0.2f;
+
+    private PeripheralCueLearnedModel learnedModel;
+    private TextAsset loadedLearnedModelJson;
 
     public PeripheralCuePrediction Predict(PeripheralDetectionResult result)
     {
@@ -70,10 +79,17 @@ public class PeripheralCueModel : MonoBehaviour
 
         score = Mathf.Clamp01(score);
 
+        if (comparisonCondition == PeripheralCueComparisonCondition.LearnedCue)
+        {
+            PeripheralCuePrediction learnedPrediction;
+            if (TryPredictLearned(result, outOfView, approaching, speaking, crossing, near, out learnedPrediction))
+                return learnedPrediction;
+        }
+
         PeripheralCuePrediction prediction = new PeripheralCuePrediction();
         prediction.cueType = SelectCueType(speaking, approaching, crossing, outOfView, near, score);
         prediction.presenceScore = prediction.cueType == PeripheralCueType.None ? 0f : score;
-        EnvironmentAcousticSample acousticSample = GetAcousticSample(result);
+
         if (comparisonCondition == PeripheralCueComparisonCondition.FixedCue)
         {
             prediction.presenceScore = prediction.cueType == PeripheralCueType.None ? 0f : fixedPresenceScore;
@@ -84,6 +100,7 @@ public class PeripheralCueModel : MonoBehaviour
             return prediction;
         }
 
+        EnvironmentAcousticSample acousticSample = GetAcousticSample(result);
         prediction.volumeGain = prediction.cueType == PeripheralCueType.None ? 0f : Mathf.Clamp01(score * acousticSample.distanceAttenuation * acousticSample.occlusionGain);
         prediction.lowPassHz = acousticSample.lowPassHz;
         prediction.reverbAmount = prediction.cueType == PeripheralCueType.None ? 0f : acousticSample.reverbAmount;
@@ -139,5 +156,69 @@ public class PeripheralCueModel : MonoBehaviour
     private static bool HasState(PeripheralState value, PeripheralState state)
     {
         return (value & state) != 0;
+    }
+
+    private bool TryPredictLearned(
+        PeripheralDetectionResult result,
+        bool outOfView,
+        bool approaching,
+        bool speaking,
+        bool crossing,
+        bool near,
+        out PeripheralCuePrediction prediction)
+    {
+        prediction = new PeripheralCuePrediction();
+        if (!EnsureLearnedModelLoaded())
+            return false;
+
+        PeripheralCueFeatureContext context = new PeripheralCueFeatureContext();
+        context.conditionLabel = learnedConditionLabel;
+        context.cueCondition = learnedFeatureCueCondition;
+        context.materialClass = environmentProfile != null ? environmentProfile.materialClass.ToString() : AcousticMaterialClass.Neutral.ToString();
+        context.targetId = result.targetId;
+        context.roomScale = environmentProfile != null ? environmentProfile.roomScale : 1f;
+        context.environmentReverbAmount = environmentProfile != null ? environmentProfile.reverbAmount : 0f;
+        context.environmentOcclusionStrength = environmentProfile != null ? environmentProfile.occlusionStrength : 0f;
+        context.environmentDistanceAttenuation = environmentProfile != null ? environmentProfile.distanceAttenuation : 0f;
+        context.environmentRt60 = environmentProfile != null ? environmentProfile.rt60 : 0f;
+        context.environmentDrr = environmentProfile != null ? environmentProfile.drr : 0f;
+        context.outOfView = outOfView;
+        context.approaching = approaching;
+        context.speaking = speaking;
+        context.gazing = HasState(result.state, PeripheralState.Gazing);
+        context.near = near;
+        context.crossing = crossing;
+        context.distance = result.distance;
+        context.viewAngle = result.viewAngle;
+        context.radialSpeed = result.radialSpeed;
+        context.lateralSpeed = result.lateralSpeed;
+        context.localX = result.userLocalPosition.x;
+        context.localY = result.userLocalPosition.y;
+        context.localZ = result.userLocalPosition.z;
+
+        prediction = learnedModel.Predict(context);
+        return true;
+    }
+
+    private bool EnsureLearnedModelLoaded()
+    {
+        if (learnedModelJson == null)
+            return false;
+
+        if (learnedModel != null && loadedLearnedModelJson == learnedModelJson && learnedModel.IsLoaded)
+            return true;
+
+        loadedLearnedModelJson = learnedModelJson;
+        try
+        {
+            learnedModel = PeripheralCueLearnedModel.FromJson(learnedModelJson.text);
+            return learnedModel != null && learnedModel.IsLoaded;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning("Failed to load learned peripheral cue model: " + exception.Message, this);
+            learnedModel = null;
+            return false;
+        }
     }
 }
