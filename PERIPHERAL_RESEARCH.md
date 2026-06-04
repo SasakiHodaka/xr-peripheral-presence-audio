@@ -58,6 +58,7 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - `radialSpeed`: Positive value means the target is approaching.
 - `lateralSpeed`: Sideways movement speed in user-local space.
 - `localX`, `localY`, `localZ`: Target position in user-head local coordinates.
+- `expectedDirection`: Direction label derived from `localX` and `localZ`: `Left`, `Right`, `Front`, or `Rear`.
 - `cueType`: Predicted cue category from `PeripheralCueModel`.
 - `presenceScore`: Predicted peripheral presence strength.
 - `volumeGain`: Predicted audio gain to use when the cue is played.
@@ -69,6 +70,7 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - `reactionTime`: Trial elapsed time when the detection response was first pressed.
 - `responseKey`: Detection key name, usually `Space`.
 - `directionResponse`: Direction key response, such as `Left`, `Right`, `Front`, or `Rear`.
+- `directionCorrect`: Whether `directionResponse` matches `expectedDirection`.
 - `subjectiveRating`: Numeric rating entered with keys `1` to `5`.
 - `playbackCue`: Cue candidate currently controlled by `PeripheralCueAudioEmitter`.
 - `playbackActive`: Whether `PeripheralCueAudioEmitter` currently considers the cue audible.
@@ -293,11 +295,12 @@ The effectiveness score is:
 
 ```text
 detectionSuccess
-+ directionResponseRate
++ directionAccuracy
 - normalizedReactionTime
 + normalizedRating
 ```
 
+When older logs do not contain `directionCorrect`, the analysis script falls back to `directionResponseRate`.
 Rows marked `isBestCue=True` are the current label candidates for `cueType`.
 
 To export only the best cue labels with model targets:

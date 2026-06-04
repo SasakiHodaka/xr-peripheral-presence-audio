@@ -132,6 +132,8 @@ def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS
             if row.get("directionResponse", "").strip()
         ]
         direction_response_rate = len(direction_values) / max(1, len(group_rows))
+        direction_accuracy = calculate_direction_accuracy(group_rows)
+        direction_score = direction_accuracy if direction_accuracy is not None else direction_response_rate
 
         ratings = [
             parse_float(row.get("subjectiveRating"), None)
@@ -147,7 +149,7 @@ def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS
 
         cue_effectiveness = (
             detection_success
-            + direction_response_rate
+            + direction_score
             - normalized_reaction_time
             + normalized_rating
         )
@@ -161,6 +163,7 @@ def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS
                 "detectionSuccess": detection_success,
                 "meanReactionTime": mean_reaction_time,
                 "directionResponseRate": direction_response_rate,
+                "directionAccuracy": direction_accuracy,
                 "meanRating": mean_rating,
                 "playbackRate": playback_rate,
                 "cueEffectiveness": cue_effectiveness,
@@ -168,6 +171,25 @@ def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS
         )
 
     return output
+
+
+def calculate_direction_accuracy(rows):
+    values = []
+    for row in rows:
+        direction_correct = str(row.get("directionCorrect", "")).strip()
+        if direction_correct:
+            values.append(parse_bool(direction_correct))
+            continue
+
+        response = row.get("directionResponse", "").strip()
+        expected = row.get("expectedDirection", "").strip()
+        if response and expected:
+            values.append(response.lower() == expected.lower())
+
+    if not values:
+        return None
+
+    return sum(1 for value in values if value) / len(values)
 
 
 def best_cue_labels(effectiveness_rows):
@@ -203,7 +225,9 @@ def target_values_from_effectiveness(row, reaction_time_cap=DEFAULT_REACTION_TIM
     mean_reaction = parse_float(row.get("meanReactionTime"), reaction_time_cap)
     normalized_reaction = min(mean_reaction, reaction_time_cap) / reaction_time_cap
     detection = parse_float(row.get("detectionSuccess"))
-    direction = parse_float(row.get("directionResponseRate"))
+    direction = parse_float(row.get("directionAccuracy"), None)
+    if direction is None:
+        direction = parse_float(row.get("directionResponseRate"))
     rating = parse_float(row.get("meanRating")) / 5.0
 
     presence_score = clamp01(
@@ -599,6 +623,7 @@ def write_cue_effectiveness_csv(source_path, rows, output_path=None, reaction_ti
         "detectionSuccess",
         "meanReactionTime",
         "directionResponseRate",
+        "directionAccuracy",
         "meanRating",
         "playbackRate",
         "cueEffectiveness",
@@ -625,6 +650,7 @@ def write_cue_effectiveness_csv(source_path, rows, output_path=None, reaction_ti
                     "detectionSuccess": f"{item['detectionSuccess']:.3f}",
                     "meanReactionTime": f"{item['meanReactionTime']:.3f}",
                     "directionResponseRate": f"{item['directionResponseRate']:.3f}",
+                    "directionAccuracy": format_optional_float(item["directionAccuracy"]),
                     "meanRating": f"{item['meanRating']:.3f}",
                     "playbackRate": f"{item['playbackRate']:.3f}",
                     "cueEffectiveness": f"{item['cueEffectiveness']:.3f}",
@@ -652,6 +678,7 @@ def write_label_dataset_csv(source_path, rows, output_path=None, reaction_time_c
         "detectionSuccess",
         "meanReactionTime",
         "directionResponseRate",
+        "directionAccuracy",
         "meanRating",
         "rows",
     ]
@@ -674,6 +701,7 @@ def write_label_dataset_csv(source_path, rows, output_path=None, reaction_time_c
                     "detectionSuccess": f"{item['detectionSuccess']:.3f}",
                     "meanReactionTime": f"{item['meanReactionTime']:.3f}",
                     "directionResponseRate": f"{item['directionResponseRate']:.3f}",
+                    "directionAccuracy": format_optional_float(item["directionAccuracy"]),
                     "meanRating": f"{item['meanRating']:.3f}",
                     "rows": item["rows"],
                 }

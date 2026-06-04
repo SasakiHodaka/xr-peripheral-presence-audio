@@ -59,7 +59,7 @@ public class PeripheralStateLogger : MonoBehaviour
     {
         filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,cueCandidate,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,cueType,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,responseGiven,reactionTime,responseKey,directionResponse,subjectiveRating,playbackCue,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
+        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,cueCandidate,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,expectedDirection,cueType,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,responseGiven,reactionTime,responseKey,directionResponse,directionCorrect,subjectiveRating,playbackCue,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
         writer.Flush();
 
         Debug.Log("Peripheral CSV created: " + filePath);
@@ -181,6 +181,8 @@ public class PeripheralStateLogger : MonoBehaviour
 
         PeripheralCuePrediction cue = cueModel != null ? cueModel.Predict(result) : new PeripheralCuePrediction();
         PeripheralCuePlaybackState playback = audioEmitter != null ? audioEmitter.GetPlaybackState(result.targetId) : new PeripheralCuePlaybackState();
+        string expectedDirection = GetExpectedDirection(result);
+        string directionResponse = GetDirectionResponse();
 
         string line = string.Join(",",
             Escape(participantId),
@@ -213,6 +215,7 @@ public class PeripheralStateLogger : MonoBehaviour
             result.userLocalPosition.x.ToString("F3", CultureInfo.InvariantCulture),
             result.userLocalPosition.y.ToString("F3", CultureInfo.InvariantCulture),
             result.userLocalPosition.z.ToString("F3", CultureInfo.InvariantCulture),
+            Escape(expectedDirection),
             cue.cueType.ToString(),
             cue.presenceScore.ToString("F3", CultureInfo.InvariantCulture),
             cue.volumeGain.ToString("F3", CultureInfo.InvariantCulture),
@@ -222,7 +225,8 @@ public class PeripheralStateLogger : MonoBehaviour
             GetResponseGiven(),
             FormatOptionalTime(GetReactionTime()),
             Escape(GetResponseKey()),
-            Escape(GetDirectionResponse()),
+            Escape(directionResponse),
+            FormatOptionalBool(GetDirectionCorrect(directionResponse, expectedDirection)),
             GetSubjectiveRating().ToString(CultureInfo.InvariantCulture),
             Escape(playback.cueCandidate.ToString()),
             playback.playbackActive,
@@ -322,6 +326,23 @@ public class PeripheralStateLogger : MonoBehaviour
         return experimentController != null ? experimentController.DirectionResponse : string.Empty;
     }
 
+    private static string GetExpectedDirection(PeripheralDetectionResult result)
+    {
+        Vector3 local = result.userLocalPosition;
+        if (Mathf.Abs(local.x) > Mathf.Abs(local.z))
+            return local.x < 0f ? "Left" : "Right";
+
+        return local.z < 0f ? "Rear" : "Front";
+    }
+
+    private static bool? GetDirectionCorrect(string response, string expected)
+    {
+        if (string.IsNullOrEmpty(response) || string.IsNullOrEmpty(expected))
+            return null;
+
+        return string.Equals(response, expected, System.StringComparison.OrdinalIgnoreCase);
+    }
+
     private int GetSubjectiveRating()
     {
         return experimentController != null ? experimentController.SubjectiveRating : 0;
@@ -330,6 +351,11 @@ public class PeripheralStateLogger : MonoBehaviour
     private static string FormatOptionalTime(float value)
     {
         return value >= 0f ? value.ToString("F3", CultureInfo.InvariantCulture) : string.Empty;
+    }
+
+    private static string FormatOptionalBool(bool? value)
+    {
+        return value.HasValue ? value.Value.ToString() : string.Empty;
     }
 
     private static bool HasState(PeripheralState value, PeripheralState state)

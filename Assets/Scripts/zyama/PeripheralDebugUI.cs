@@ -100,6 +100,7 @@ public class PeripheralDebugUI : MonoBehaviour
                 " | " + result.state +
                 " | dist " + result.distance.ToString("F2") +
                 " | angle " + result.viewAngle.ToString("F1") +
+                " | dir " + GetExpectedDirection(result) +
                 " | cue " + cue.cueType +
                 " " + cue.presenceScore.ToString("F2") +
                 " | audio " + playback.outputVolume.ToString("F2") +
@@ -155,6 +156,15 @@ public class PeripheralDebugUI : MonoBehaviour
             return "(none)";
 
         return audioEmitter.PlaybackCueLabel + " " + audioEmitter.PlaybackVolume.ToString("F2");
+    }
+
+    private static string GetExpectedDirection(PeripheralDetectionResult result)
+    {
+        Vector3 local = result.userLocalPosition;
+        if (Mathf.Abs(local.x) > Mathf.Abs(local.z))
+            return local.x < 0f ? "Left" : "Right";
+
+        return local.z < 0f ? "Rear" : "Front";
     }
 
     private void DrawTrialLine(int row)
