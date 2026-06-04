@@ -2,15 +2,89 @@
 
 ## Fixed Direction
 
-This project should be developed as a three-layer system:
+This project should use human-labeled peripheral cue learning as the primary research pipeline:
 
 ```text
-environment acoustics estimation
--> audio-visual learning
--> Unity peripheral cue control
+Unity situation generation
+-> multiple peripheral cue candidates
+-> human-subject evaluation
+-> best cue label per situation
+-> mathematical PresenceScore / volumeGain targets
+-> neural model training
+-> unknown-situation evaluation
 ```
 
-The immediate implementation target is not a full neural acoustic field. The first target is an explainable Unity system that can play and log adaptive audio cues for peripheral presence. The learning components should later replace or condition parts of that cue system.
+The immediate implementation target is not a full neural acoustic field or a physically complete acoustic simulator. The first target is an explainable Unity experiment system that can present multiple peripheral presence cues, measure human recognition performance, convert the best cue into labels, and train a model to predict cue type and cue strength for unknown situations.
+
+Environment acoustics estimation remains a later extension:
+
+```text
+human-labeled cue learning
+-> environment-adaptive cue parameters
+-> audio-visual / acoustic simulation support
+```
+
+The research should be presented as a hybrid human-machine approach:
+
+```text
+human perception experiment
+-> cue labels and perceptual targets
+-> machine learning for prediction and generalization
+-> simulation-based environment estimation for acoustic adaptation
+```
+
+Human participants provide the perceptual ground truth. The model provides scalable prediction for situations that were not directly tested.
+
+## Primary Human-Labeled Cue Learning Pipeline
+
+The core experiment flow is:
+
+1. Generate peripheral-person situation patterns in Unity.
+2. Present multiple cue candidates for each situation.
+3. Measure recognition performance in a human-subject experiment.
+4. Select the most effective cue as the target label.
+5. Define `PresenceScore` and `volumeGain` with a mathematical model.
+6. Train a neural model using the labeled dataset.
+7. Evaluate prediction performance on unknown situations.
+
+Recommended initial cue candidates:
+
+- `NoCue`
+- `Footstep`
+- `Breathing`
+- `ClothRustle`
+- `Voice`
+- `AmbientPresence`
+- `MixedCue`
+
+Recommended objective metrics:
+
+- detection success
+- reaction time
+- direction judgment accuracy
+- missed detections
+- false responses
+
+Recommended subjective metrics:
+
+- awareness
+- naturalness
+- annoyance
+- discomfort
+- immersion
+
+Label generation should use a combined effectiveness score instead of reaction time alone:
+
+```text
+cueEffectiveness =
+  detectionSuccess
+  + directionAccuracy
+  - normalizedReactionTime
+  + awarenessRating
+  + naturalnessRating
+  - annoyanceRating
+  - discomfortRating
+```
 
 The concrete study design is defined in `RESEARCH_DESIGN.md`. Implementation work should support that document's research question, cue conditions, target scenarios, and dependent measures before expanding the AI scope.
 
@@ -184,7 +258,25 @@ SoundSpaces 2.0 dataset generation
 
 Do not start with NAF. Do not train a full neural acoustic field until the compact estimator has been validated.
 
-### Step 1: Finish the Unity cue layer
+### Step 1: Add cue-candidate experiment trials
+
+Implement:
+
+- cue-candidate trial selection
+- `cueCandidate` metadata
+- response and reaction-time logging
+- subjective rating logging
+
+Target flow:
+
+```text
+BackApproach situation
+-> Footstep / Breathing / ClothRustle / Voice / AmbientPresence candidates
+-> participant response
+-> CSV log
+```
+
+### Step 2: Finish the Unity cue playback layer
 
 Implement:
 
@@ -203,7 +295,39 @@ person approaches from behind
 -> CSV log
 ```
 
-### Step 2: Add manual environment adaptation
+### Step 3: Generate human labels
+
+Implement:
+
+- per-condition aggregation
+- cue effectiveness scoring
+- best-cue label selection
+- labeled dataset export
+
+Targets:
+
+- `cueType`
+- `presenceScore`
+- `volumeGain`
+
+### Step 4: Train the cue prediction model
+
+Start with:
+
+- rule-based baseline
+- logistic regression or random forest baseline
+- small MLP
+
+Evaluate:
+
+- cue type accuracy
+- macro F1
+- `PresenceScore` MAE
+- `volumeGain` MAE
+- held-out situation performance
+- held-out participant performance
+
+### Step 5: Add manual environment adaptation
 
 Implement:
 
@@ -214,13 +338,14 @@ Implement:
 
 This allows testing the environment-adaptive structure before training a model.
 
-### Step 3: Add experimental comparison conditions
+### Step 6: Add experimental comparison conditions
 
 Conditions:
 
 - `NoCue`
 - `FixedCue`
 - `StateBasedCue`
+- `LearnedCue`
 - `EnvironmentAdaptiveCue`
 
 Purpose:
@@ -232,7 +357,7 @@ Current Unity status:
 - `PeripheralCueModel.comparisonCondition` switches these cue-control modes.
 - `cueCondition` is written to CSV and included in the first cue-training dataset.
 
-### Step 4: Define simulation dataset schema
+### Step 7: Define simulation dataset schema
 
 Save each generated sample with:
 
@@ -252,7 +377,7 @@ Save each generated sample with:
 - `rt60`
 - `drr`
 
-### Step 5: Train self-supervised encoders
+### Step 8: Train self-supervised encoders
 
 Start with small data and simple tasks:
 
@@ -262,7 +387,7 @@ Start with small data and simple tasks:
 
 Then scale toward RIR prediction.
 
-### Step 6: Fine-tune environment estimator
+### Step 9: Fine-tune environment estimator
 
 Labels:
 
@@ -278,7 +403,7 @@ Output:
 environmentAcousticProfile
 ```
 
-### Step 7: Integrate model output into Unity
+### Step 10: Integrate model output into Unity
 
 Bridge:
 
@@ -289,7 +414,7 @@ trained estimator
 -> PeripheralCueAudioEmitter
 ```
 
-### Step 8: Evaluate
+### Step 11: Evaluate
 
 Model evaluation:
 

@@ -212,18 +212,25 @@ audio encoder + visual encoder + position encoder
 
 High-confidence implementation references:
 
+- SoundSpaces GitHub: https://github.com/facebookresearch/sound-spaces
+- Few-shot RIR GitHub: https://github.com/SAGNIKMJR/few-shot-rir
+- Learning Neural Acoustic Fields GitHub: https://github.com/aluo-x/Learning_Neural_Acoustic_Fields
+- Audio Spectrogram Transformer GitHub: https://github.com/YuanGongND/ast
 - Microsoft spatialaudio-unity: https://github.com/microsoft/spatialaudio-unity
 - Microsoft Spatial Sound documentation: https://learn.microsoft.com/en-us/windows/win32/coreaudio/spatial-sound
+- Steam Audio Unity documentation: https://valvesoftware.github.io/steam-audio/doc/unity/guide.html
 - SoundSpaces project: https://soundspaces.org/
 - Habitat: https://github.com/facebookresearch/habitat-sim
 
 Project-local implementation target:
 
 ```text
-PeripheralCueModel
+Unity situation patterns
+-> cue candidate presentation
+-> human-subject labels
+-> PeripheralCueModel / learned cue model
 -> PeripheralCueAudioEmitter
--> EnvironmentAcousticProfile
--> experiment condition comparison
+-> unknown-situation evaluation
 ```
 
 ## Current Working Interpretation
@@ -231,11 +238,11 @@ PeripheralCueModel
 The most important center of gravity is:
 
 ```text
-SoundSpaces 2.0 for data generation
-Few-Shot Audio-Visual Environment Acoustics for environment estimation
+human-subject cue labels for ground truth
 VRBubble + functional HRI sound for cue design
-Spatial Computing / MR Robotics for CPS framing
 Unity PeripheralCueModel for implementation
+SoundSpaces / Few-Shot RIR / NAF for later environment-acoustic expansion
+AST or smaller audio models for later audio-feature learning
 ```
 
 Audio2Face remains a later optional extension for the `Speaking` condition, not the core environment acoustics pipeline.
@@ -309,4 +316,3 @@ distance, direction, state flags, room/acoustic metadata
 ```
 
 This gives an early trainable system while preserving a clean path toward full RIR or richer acoustic prediction later.
-

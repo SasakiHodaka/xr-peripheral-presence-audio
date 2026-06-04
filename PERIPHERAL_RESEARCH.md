@@ -7,10 +7,11 @@
 3. Select `PeripheralSystem`.
 4. Assign `Main Camera` or `XR Origin/Main Camera` to `PeripheralStateDetector.userHead` if it is empty.
 5. Set `PeripheralStateLogger.participantId`, `conditionLabel`, and `trialId` in the Inspector.
-6. Set `PeripheralTrialController.trialDurationSeconds` if the trial length should differ from the default.
-7. Enter Play Mode.
-8. Confirm that the Game view shows `Peripheral Debug`.
-9. Confirm that Unity Console prints `Peripheral CSV created: ...`.
+6. Set `PeripheralCueExperimentController.cueCandidate` to the sound candidate for the trial.
+7. Set `PeripheralTrialController.trialDurationSeconds` if the trial length should differ from the default.
+8. Enter Play Mode.
+9. Confirm that the Game view shows `Peripheral Debug`.
+10. Confirm that Unity Console prints `Peripheral CSV created: ...`.
 
 CSV files are written to Unity's `Application.persistentDataPath`.
 In the current Windows Editor setup this is typically:
@@ -63,11 +64,79 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - `cueLowPassHz`: Low-pass cutoff predicted by `PeripheralCueModel` and `EnvironmentAcousticProfile`.
 - `cueReverbAmount`: Reverb amount predicted by `PeripheralCueModel` and `EnvironmentAcousticProfile`.
 - `cueOcclusionGain`: Occlusion gain predicted by `PeripheralCueModel` and `EnvironmentAcousticProfile`.
+- `cueCandidate`: Sound candidate presented in the current trial.
+- `responseGiven`: Whether the participant pressed the detection response key.
+- `reactionTime`: Trial elapsed time when the detection response was first pressed.
+- `responseKey`: Detection key name, usually `Space`.
+- `directionResponse`: Direction key response, such as `Left`, `Right`, `Front`, or `Rear`.
+- `subjectiveRating`: Numeric rating entered with keys `1` to `5`.
+- `playbackCue`: Cue candidate currently controlled by `PeripheralCueAudioEmitter`.
 - `playbackActive`: Whether `PeripheralCueAudioEmitter` currently considers the cue audible.
 - `playbackVolume`: Actual target output volume after base gain scaling.
 - `playbackLowPassHz`: Current low-pass cutoff used for spatial/rear/far cue filtering.
 - `playbackReverbAmount`: Current reverb amount used for cue playback.
 - `footstepInterval`: Current interval used for footstep one-shot playback.
+
+## Cue Candidate Trials
+
+`PeripheralCueExperimentController` controls the sound candidate and participant response fields.
+
+Initial cue candidates:
+
+- `NoCue`
+- `PredictedCue`
+- `Footstep`
+- `Breathing`
+- `ClothRustle`
+- `Voice`
+- `AmbientPresence`
+- `MixedCue`
+
+Default response keys:
+
+- `Space`: detection response.
+- `LeftArrow`, `RightArrow`, `UpArrow`, `DownArrow`: direction response.
+- `1` to `5`: subjective rating.
+
+Use one cue candidate per trial when collecting labels. For example:
+
+```text
+BackApproach + Footstep
+BackApproach + Breathing
+BackApproach + ClothRustle
+BackApproach + AmbientPresence
+```
+
+`PeripheralCueAudioEmitter` plays the selected candidate as spatial audio at the currently most salient peripheral target.
+
+`PeripheralCueTrialSequencer` can cycle through condition and cue-candidate combinations.
+
+Default sequencer keys:
+
+- `N`: next condition/cue trial.
+- `B`: previous condition/cue trial.
+- `R`: restart the current trial.
+
+The default sequence covers:
+
+```text
+BackApproach
+Approach
+Crossing
+Speaking
+```
+
+combined with:
+
+```text
+NoCue
+Footstep
+Breathing
+ClothRustle
+Voice
+AmbientPresence
+MixedCue
+```
 
 ## Initial Metrics To Inspect
 
@@ -197,6 +266,50 @@ cue_training_dataset.csv
 The first model should predict `cueType`, `presenceScore`, `volumeGain`, `cueLowPassHz`, `cueReverbAmount`, and `cueOcclusionGain` from target state, distance, speed, and local position columns.
 
 Use `cueCondition` to separate fixed, state-based, and environment-adaptive cue rows during baseline training and evaluation.
+
+## Cue Candidate Effectiveness
+
+To compute cue candidate effectiveness and best-cue labels from a source CSV:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --cue-effectiveness
+```
+
+This writes:
+
+```text
+peripheral_state_log_yyyyMMdd_HHmmss_cue_effectiveness.csv
+```
+
+The effectiveness score is:
+
+```text
+detectionSuccess
++ directionResponseRate
+- normalizedReactionTime
++ normalizedRating
+```
+
+Rows marked `isBestCue=True` are the current label candidates for `cueType`.
+
+To export only the best cue labels with model targets:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --label-dataset
+```
+
+This writes:
+
+```text
+peripheral_state_log_yyyyMMdd_HHmmss_cue_labels.csv
+```
+
+The label dataset includes:
+
+- `cueType`
+- `presenceScore`
+- `volumeGain`
+- source metrics used to compute the target values
 
 ## AUI Log Collection Controller
 
