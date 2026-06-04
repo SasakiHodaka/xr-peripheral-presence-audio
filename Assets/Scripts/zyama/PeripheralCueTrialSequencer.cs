@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PeripheralCueTrialSequencer : MonoBehaviour
@@ -6,6 +7,7 @@ public class PeripheralCueTrialSequencer : MonoBehaviour
     public PeripheralTrialController trialController;
     public PeripheralTrialConditionController conditionController;
     public PeripheralCueExperimentController experimentController;
+    public PeripheralStateLogger logger;
 
     [Header("Sequence")]
     public PeripheralTrialCondition[] conditions =
@@ -29,19 +31,38 @@ public class PeripheralCueTrialSequencer : MonoBehaviour
 
     public int conditionIndex;
     public int cueCandidateIndex;
+    public int repeatIndex;
+    [Min(1)] public int repeatsPerCombination = 1;
+    public bool randomizeOrder = false;
+    public int randomSeed = 7;
     public bool applyOnStart = true;
     public bool autoAdvanceOnTrialComplete = false;
+    public bool updateLoggerMetadata = true;
 
     [Header("Keyboard")]
     public KeyCode nextTrialKey = KeyCode.N;
     public KeyCode previousTrialKey = KeyCode.B;
     public KeyCode restartTrialKey = KeyCode.R;
 
+    private readonly List<int> trialOrder = new List<int>();
+    private int sequenceIndex;
+    private bool orderDirty = true;
+
+    public int CurrentSequenceIndex
+    {
+        get { return sequenceIndex; }
+    }
+
+    public int TotalTrialCount
+    {
+        get { return GetCombinationCount() * Mathf.Max(1, repeatsPerCombination); }
+    }
+
     public string CurrentTrialLabel
     {
         get
         {
-            return CurrentCondition.ToString() + " / " + CurrentCueCandidate.ToString();
+            return CurrentCondition + " / " + CurrentCueCandidate + " / R" + (repeatIndex + 1).ToString("00");
         }
     }
 
@@ -77,10 +98,15 @@ public class PeripheralCueTrialSequencer : MonoBehaviour
 
         if (experimentController == null)
             experimentController = GetComponent<PeripheralCueExperimentController>();
+
+        if (logger == null)
+            logger = GetComponent<PeripheralStateLogger>();
     }
 
     private void Start()
     {
+        RebuildOrder();
+
         if (applyOnStart)
             ApplyCurrentTrial();
     }
@@ -119,8 +145,10 @@ public class PeripheralCueTrialSequencer : MonoBehaviour
 
     public void ApplyCurrentTrial()
     {
-        conditionIndex = ClampIndex(conditionIndex, conditions);
-        cueCandidateIndex = ClampIndex(cueCandidateIndex, cueCandidates);
+        if (orderDirty || trialOrder.Count != TotalTrialCount)
+            RebuildOrder();
+
+        ApplySequenceIndex(sequenceIndex);
 
         if (experimentController != null)
             experimentController.cueCandidate = CurrentCueCandidate;
@@ -131,23 +159,76 @@ public class PeripheralCueTrialSequencer : MonoBehaviour
             conditionController.ApplyCondition();
         }
 
+        if (updateLoggerMetadata && logger != null)
+        {
+            logger.conditionLabel = CurrentCondition + "_" + CurrentCueCandidate;
+            logger.trialId = "T" + (sequenceIndex + 1).ToString("000") + "_R" + (repeatIndex + 1).ToString("00");
+        }
+
         RestartTrial();
     }
 
     private void Step(int delta)
     {
+        int total = TotalTrialCount;
+        if (total <= 0)
+            return;
+
+        sequenceIndex = (sequenceIndex + delta) % total;
+        if (sequenceIndex < 0)
+            sequenceIndex += total;
+
+        ApplyCurrentTrial();
+    }
+
+    public void RebuildOrder()
+    {
+        trialOrder.Clear();
+        int total = TotalTrialCount;
+        for (int i = 0; i < total; i++)
+            trialOrder.Add(i);
+
+        if (randomizeOrder)
+            ShuffleOrder(trialOrder, randomSeed);
+
+        sequenceIndex = Mathf.Clamp(sequenceIndex, 0, Mathf.Max(0, total - 1));
+        orderDirty = false;
+    }
+
+    private void ApplySequenceIndex(int index)
+    {
         int conditionCount = conditions != null ? conditions.Length : 0;
         int cueCount = cueCandidates != null ? cueCandidates.Length : 0;
+        int repeatCount = Mathf.Max(1, repeatsPerCombination);
         if (conditionCount == 0 || cueCount == 0)
             return;
 
-        int flatIndex = conditionIndex * cueCount + cueCandidateIndex + delta;
-        int total = conditionCount * cueCount;
-        flatIndex = (flatIndex % total + total) % total;
+        int orderedIndex = trialOrder.Count > 0 ? trialOrder[Mathf.Clamp(index, 0, trialOrder.Count - 1)] : index;
+        int combinationCount = conditionCount * cueCount;
+        repeatIndex = orderedIndex / combinationCount;
+        int combinationIndex = orderedIndex % combinationCount;
+        conditionIndex = combinationIndex / cueCount;
+        cueCandidateIndex = combinationIndex % cueCount;
+        repeatIndex = Mathf.Clamp(repeatIndex, 0, repeatCount - 1);
+    }
 
-        conditionIndex = flatIndex / cueCount;
-        cueCandidateIndex = flatIndex % cueCount;
-        ApplyCurrentTrial();
+    private int GetCombinationCount()
+    {
+        int conditionCount = conditions != null ? conditions.Length : 0;
+        int cueCount = cueCandidates != null ? cueCandidates.Length : 0;
+        return conditionCount * cueCount;
+    }
+
+    private static void ShuffleOrder(List<int> values, int seed)
+    {
+        System.Random random = new System.Random(seed);
+        for (int i = values.Count - 1; i > 0; i--)
+        {
+            int j = random.Next(i + 1);
+            int temp = values[i];
+            values[i] = values[j];
+            values[j] = temp;
+        }
     }
 
     private static int ClampIndex<T>(int value, T[] array)

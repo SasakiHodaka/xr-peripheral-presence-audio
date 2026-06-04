@@ -119,6 +119,20 @@ Default sequencer keys:
 - `B`: previous condition/cue trial.
 - `R`: restart the current trial.
 
+Useful sequencer settings:
+
+- `repeatsPerCombination`: number of repeated trials for each condition/cue pair.
+- `randomizeOrder`: shuffles the trial order using `randomSeed`.
+- `updateLoggerMetadata`: writes condition/cue labels and automatic trial IDs to `PeripheralStateLogger`.
+
+Automatic trial IDs use this form:
+
+```text
+T001_R01
+T002_R01
+...
+```
+
 The default sequence covers:
 
 ```text

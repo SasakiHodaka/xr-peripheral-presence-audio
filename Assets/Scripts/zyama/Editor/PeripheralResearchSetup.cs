@@ -59,6 +59,7 @@ public static class PeripheralResearchSetup
         trialSequencer.trialController = trialController;
         trialSequencer.conditionController = conditionController;
         trialSequencer.experimentController = experimentController;
+        trialSequencer.logger = logger;
 
         debugUI.detector = detector;
         debugUI.cueModel = cueModel;

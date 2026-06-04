@@ -128,7 +128,10 @@ public class PeripheralDebugUI : MonoBehaviour
 
     private string GetSequenceLabel()
     {
-        return trialSequencer != null ? trialSequencer.CurrentTrialLabel : "(manual)";
+        if (trialSequencer == null)
+            return "(manual)";
+
+        return (trialSequencer.CurrentSequenceIndex + 1) + " / " + trialSequencer.TotalTrialCount + " " + trialSequencer.CurrentTrialLabel;
     }
 
     private string GetAuiTrialLabel()
