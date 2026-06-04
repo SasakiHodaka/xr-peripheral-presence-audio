@@ -243,4 +243,83 @@ Implemented local commands:
 ```powershell
 python Tools/analyze_peripheral_csv.py --cue-effectiveness
 python Tools/analyze_peripheral_csv.py --label-dataset
+python Tools/analyze_peripheral_csv.py --cue-ranking-report
 ```
+
+## Subject Experiment Input
+
+The current Unity experiment controller records both objective responses and separated subjective ratings.
+
+Response keys:
+
+- `Space`: detection response.
+- `LeftArrow`, `RightArrow`, `UpArrow`, `DownArrow`: perceived target direction.
+
+Rating mode keys:
+
+- `F1`: overall rating.
+- `F2`: awareness / noticeability.
+- `F3`: naturalness.
+- `F4`: annoyance.
+- `F5`: confidence.
+
+Rating value keys:
+
+- `1` to `5`: assign the rating value to the currently selected rating mode.
+
+CSV rating columns:
+
+- `subjectiveRating`
+- `awarenessRating`
+- `naturalnessRating`
+- `annoyanceRating`
+- `confidenceRating`
+
+The separated ratings are used by the analysis script as follows:
+
+```text
+cueEffectiveness =
+  detectionSuccess
+  + directionAccuracy
+  - normalizedReactionTime
+  + awarenessRating
+  + 0.5 * naturalnessRating
+  + 0.25 * confidenceRating
+  - 0.5 * annoyanceRating
+```
+
+If separated ratings are not available, the older `subjectiveRating` column is used as the awareness term.
+
+## Minimum Subject Experiment Run
+
+For the first real experiment run, use a small controlled set before collecting many participants.
+
+Recommended initial conditions:
+
+- `BackApproach`
+- `Approach`
+- `Crossing`
+- `Speaking`
+
+Recommended initial cue candidates:
+
+- `NoCue`
+- `Footstep`
+- `Breathing`
+- `AmbientPresence`
+- `MixedCue`
+
+Recommended repeats:
+
+- at least 2 repeats per condition/cue pair for pilot debugging
+- more repeats after audio levels and timing are fixed
+
+After the run, generate the ranking report:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --cue-ranking-report
+python Tools/analyze_peripheral_csv.py --cue-effectiveness
+python Tools/analyze_peripheral_csv.py --label-dataset
+```
+
+The Markdown ranking report is the main handoff artifact for checking which cue won for each situation before training the learned cue model.

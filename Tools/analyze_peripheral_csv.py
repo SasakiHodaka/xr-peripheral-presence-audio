@@ -25,10 +25,16 @@ def parse_float(value, default=0.0):
 
 
 def is_source_log(path):
+    generated_suffixes = (
+        "_summary",
+        "_cue_effectiveness",
+        "_cue_labels",
+        "_cue_ranking_report",
+    )
     return (
         path.name.startswith("peripheral_state_log")
         and path.suffix.lower() == ".csv"
-        and not path.stem.endswith("_summary")
+        and not any(path.stem.endswith(suffix) for suffix in generated_suffixes)
         and path.name != "peripheral_batch_summary.csv"
     )
 
@@ -135,14 +141,16 @@ def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS
         direction_accuracy = calculate_direction_accuracy(group_rows)
         direction_score = direction_accuracy if direction_accuracy is not None else direction_response_rate
 
-        ratings = [
-            parse_float(row.get("subjectiveRating"), None)
-            for row in group_rows
-            if row.get("subjectiveRating")
-        ]
-        ratings = [value for value in ratings if value is not None and value > 0.0]
-        mean_rating = sum(ratings) / len(ratings) if ratings else 0.0
+        mean_rating = mean_positive_rating(group_rows, "subjectiveRating")
+        mean_awareness = mean_positive_rating(group_rows, "awarenessRating")
+        mean_naturalness = mean_positive_rating(group_rows, "naturalnessRating")
+        mean_annoyance = mean_positive_rating(group_rows, "annoyanceRating")
+        mean_confidence = mean_positive_rating(group_rows, "confidenceRating")
         normalized_rating = mean_rating / 5.0 if mean_rating > 0.0 else 0.0
+        awareness_score = mean_awareness / 5.0 if mean_awareness > 0.0 else normalized_rating
+        naturalness_score = mean_naturalness / 5.0 if mean_naturalness > 0.0 else 0.0
+        annoyance_penalty = mean_annoyance / 5.0 if mean_annoyance > 0.0 else 0.0
+        confidence_score = mean_confidence / 5.0 if mean_confidence > 0.0 else 0.0
 
         playback_rows = sum(1 for row in group_rows if parse_bool(row.get("playbackActive")))
         playback_rate = playback_rows / max(1, len(group_rows))
@@ -151,7 +159,10 @@ def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS
             detection_success
             + direction_score
             - normalized_reaction_time
-            + normalized_rating
+            + awareness_score
+            + 0.5 * naturalness_score
+            + 0.25 * confidence_score
+            - 0.5 * annoyance_penalty
         )
 
         output.append(
@@ -165,12 +176,26 @@ def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS
                 "directionResponseRate": direction_response_rate,
                 "directionAccuracy": direction_accuracy,
                 "meanRating": mean_rating,
+                "meanAwarenessRating": mean_awareness,
+                "meanNaturalnessRating": mean_naturalness,
+                "meanAnnoyanceRating": mean_annoyance,
+                "meanConfidenceRating": mean_confidence,
                 "playbackRate": playback_rate,
                 "cueEffectiveness": cue_effectiveness,
             }
         )
 
     return output
+
+
+def mean_positive_rating(rows, column):
+    ratings = [
+        parse_float(row.get(column), None)
+        for row in rows
+        if row.get(column)
+    ]
+    ratings = [value for value in ratings if value is not None and value > 0.0]
+    return sum(ratings) / len(ratings) if ratings else 0.0
 
 
 def calculate_direction_accuracy(rows):
@@ -228,7 +253,8 @@ def target_values_from_effectiveness(row, reaction_time_cap=DEFAULT_REACTION_TIM
     direction = parse_float(row.get("directionAccuracy"), None)
     if direction is None:
         direction = parse_float(row.get("directionResponseRate"))
-    rating = parse_float(row.get("meanRating")) / 5.0
+    awareness = parse_float(row.get("meanAwarenessRating")) / 5.0
+    rating = awareness if awareness > 0.0 else parse_float(row.get("meanRating")) / 5.0
 
     presence_score = clamp01(
         0.15
@@ -625,6 +651,10 @@ def write_cue_effectiveness_csv(source_path, rows, output_path=None, reaction_ti
         "directionResponseRate",
         "directionAccuracy",
         "meanRating",
+        "meanAwarenessRating",
+        "meanNaturalnessRating",
+        "meanAnnoyanceRating",
+        "meanConfidenceRating",
         "playbackRate",
         "cueEffectiveness",
     ]
@@ -652,6 +682,10 @@ def write_cue_effectiveness_csv(source_path, rows, output_path=None, reaction_ti
                     "directionResponseRate": f"{item['directionResponseRate']:.3f}",
                     "directionAccuracy": format_optional_float(item["directionAccuracy"]),
                     "meanRating": f"{item['meanRating']:.3f}",
+                    "meanAwarenessRating": f"{item['meanAwarenessRating']:.3f}",
+                    "meanNaturalnessRating": f"{item['meanNaturalnessRating']:.3f}",
+                    "meanAnnoyanceRating": f"{item['meanAnnoyanceRating']:.3f}",
+                    "meanConfidenceRating": f"{item['meanConfidenceRating']:.3f}",
                     "playbackRate": f"{item['playbackRate']:.3f}",
                     "cueEffectiveness": f"{item['cueEffectiveness']:.3f}",
                 }
@@ -680,6 +714,10 @@ def write_label_dataset_csv(source_path, rows, output_path=None, reaction_time_c
         "directionResponseRate",
         "directionAccuracy",
         "meanRating",
+        "meanAwarenessRating",
+        "meanNaturalnessRating",
+        "meanAnnoyanceRating",
+        "meanConfidenceRating",
         "rows",
     ]
 
@@ -703,11 +741,116 @@ def write_label_dataset_csv(source_path, rows, output_path=None, reaction_time_c
                     "directionResponseRate": f"{item['directionResponseRate']:.3f}",
                     "directionAccuracy": format_optional_float(item["directionAccuracy"]),
                     "meanRating": f"{item['meanRating']:.3f}",
+                    "meanAwarenessRating": f"{item['meanAwarenessRating']:.3f}",
+                    "meanNaturalnessRating": f"{item['meanNaturalnessRating']:.3f}",
+                    "meanAnnoyanceRating": f"{item['meanAnnoyanceRating']:.3f}",
+                    "meanConfidenceRating": f"{item['meanConfidenceRating']:.3f}",
                     "rows": item["rows"],
                 }
             )
 
     return output_path, len(labels)
+
+
+def write_cue_ranking_report(source_path, rows, output_path=None, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+    if output_path is None:
+        output_path = source_path.with_name(source_path.stem + "_cue_ranking_report.md")
+
+    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap)
+    grouped = defaultdict(list)
+    for item in effectiveness:
+        grouped[(item["conditionLabel"], item["targetId"])].append(item)
+
+    lines = [
+        "# Peripheral Cue Ranking Report",
+        "",
+        f"Source CSV: `{source_path.name}`",
+        f"Reaction time cap: {reaction_time_cap:g}s",
+        "",
+        "Effectiveness formula:",
+        "",
+        "```text",
+        "detectionSuccess",
+        "+ directionAccuracy",
+        "- normalizedReactionTime",
+        "+ awarenessRating",
+        "+ 0.5 * naturalnessRating",
+        "+ 0.25 * confidenceRating",
+        "- 0.5 * annoyanceRating",
+        "```",
+        "",
+        "If separated ratings are missing, `subjectiveRating` is used as the awareness term.",
+        "",
+    ]
+
+    if not grouped:
+        lines.extend(["No cue candidate rows were found.", ""])
+    else:
+        lines.append("## Best Cue Labels")
+        lines.append("")
+        lines.append("| Condition | Target | Best cue | Score | Rows |")
+        lines.append("| -- | -- | -- | --: | --: |")
+        for key in sorted(grouped):
+            ranked = sorted(grouped[key], key=lambda row: row["cueEffectiveness"], reverse=True)
+            best = ranked[0]
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        markdown_cell(best["conditionLabel"]),
+                        markdown_cell(best["targetId"]),
+                        markdown_cell(best["cueCandidate"]),
+                        f"{best['cueEffectiveness']:.3f}",
+                        str(best["rows"]),
+                    ]
+                )
+                + " |"
+            )
+
+        lines.append("")
+        lines.append("## Ranking By Situation")
+        lines.append("")
+        for key in sorted(grouped):
+            condition, target_id = key
+            ranked = sorted(grouped[key], key=lambda row: row["cueEffectiveness"], reverse=True)
+            lines.append(f"### {condition} / {target_id}")
+            lines.append("")
+            lines.append(
+                "| Rank | Cue | Score | Detection | Direction | RT(s) | Overall | Awareness | Naturalness | Annoyance | Confidence | Rows |"
+            )
+            lines.append("| --: | -- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |")
+            for rank, item in enumerate(ranked, start=1):
+                direction = item["directionAccuracy"]
+                if direction is None:
+                    direction = item["directionResponseRate"]
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        [
+                            str(rank),
+                            markdown_cell(item["cueCandidate"]),
+                            f"{item['cueEffectiveness']:.3f}",
+                            f"{item['detectionSuccess']:.3f}",
+                            f"{direction:.3f}",
+                            f"{item['meanReactionTime']:.3f}",
+                            f"{item['meanRating']:.3f}",
+                            f"{item['meanAwarenessRating']:.3f}",
+                            f"{item['meanNaturalnessRating']:.3f}",
+                            f"{item['meanAnnoyanceRating']:.3f}",
+                            f"{item['meanConfidenceRating']:.3f}",
+                            str(item["rows"]),
+                        ]
+                    )
+                    + " |"
+                )
+            lines.append("")
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return output_path, len(effectiveness), len(grouped)
+
+
+def markdown_cell(value):
+    return str(value).replace("|", "\\|")
 
 
 def format_html_cell(row, column):
@@ -774,6 +917,15 @@ def main():
         help="Output path for --label-dataset. Defaults to <input>_cue_labels.csv.",
     )
     parser.add_argument(
+        "--cue-ranking-report",
+        action="store_true",
+        help="Write a Markdown report ranking cue candidates by condition and target.",
+    )
+    parser.add_argument(
+        "--cue-ranking-report-path",
+        help="Output path for --cue-ranking-report. Defaults to <input>_cue_ranking_report.md.",
+    )
+    parser.add_argument(
         "--reaction-time-cap",
         type=float,
         default=DEFAULT_REACTION_TIME_SECONDS,
@@ -838,6 +990,19 @@ def main():
         )
         print(f"Label dataset CSV: {written_path}")
         print(f"Best cue labels: {label_count}")
+        return
+
+    if args.cue_ranking_report:
+        output_path = Path(args.cue_ranking_report_path) if args.cue_ranking_report_path else None
+        written_path, row_count, situation_count = write_cue_ranking_report(
+            path,
+            rows,
+            output_path,
+            args.reaction_time_cap,
+        )
+        print(f"Cue ranking report: {written_path}")
+        print(f"Cue candidate rows: {row_count}")
+        print(f"Situations: {situation_count}")
         return
 
     summaries = summarize_source(path)

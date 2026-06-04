@@ -72,6 +72,10 @@ The analysis script also uses this filename pattern as a fallback when older CSV
 - `directionResponse`: Direction key response, such as `Left`, `Right`, `Front`, or `Rear`.
 - `directionCorrect`: Whether `directionResponse` matches `expectedDirection`.
 - `subjectiveRating`: Numeric rating entered with keys `1` to `5`.
+- `awarenessRating`: Noticeability rating entered after selecting `F2`.
+- `naturalnessRating`: Naturalness rating entered after selecting `F3`.
+- `annoyanceRating`: Annoyance rating entered after selecting `F4`.
+- `confidenceRating`: Direction/perception confidence rating entered after selecting `F5`.
 - `playbackCue`: Cue candidate currently controlled by `PeripheralCueAudioEmitter`.
 - `playbackActive`: Whether `PeripheralCueAudioEmitter` currently considers the cue audible.
 - `playbackVolume`: Actual target output volume after base gain scaling.
@@ -98,7 +102,12 @@ Default response keys:
 
 - `Space`: detection response.
 - `LeftArrow`, `RightArrow`, `UpArrow`, `DownArrow`: direction response.
-- `1` to `5`: subjective rating.
+- `F1`: overall rating mode.
+- `F2`: awareness rating mode.
+- `F3`: naturalness rating mode.
+- `F4`: annoyance rating mode.
+- `F5`: confidence rating mode.
+- `1` to `5`: rating value for the selected rating mode.
 
 Use one cue candidate per trial when collecting labels. For example:
 
@@ -335,6 +344,20 @@ The label dataset includes:
 - `presenceScore`
 - `volumeGain`
 - source metrics used to compute the target values
+
+To generate a Markdown report that ranks cue candidates per situation:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --cue-ranking-report
+```
+
+This writes:
+
+```text
+peripheral_state_log_yyyyMMdd_HHmmss_cue_ranking_report.md
+```
+
+Use this report as the first experiment result artifact. It shows the best cue per condition and the full cue ranking with detection rate, direction accuracy, reaction time, and separated subjective ratings.
 
 ## AUI Log Collection Controller
 

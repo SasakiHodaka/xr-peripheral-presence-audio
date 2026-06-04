@@ -59,7 +59,7 @@ public class PeripheralStateLogger : MonoBehaviour
     {
         filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,cueCandidate,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,expectedDirection,cueType,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,responseGiven,reactionTime,responseKey,directionResponse,directionCorrect,subjectiveRating,playbackCue,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
+        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,cueCandidate,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,expectedDirection,cueType,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,responseGiven,reactionTime,responseKey,directionResponse,directionCorrect,subjectiveRating,awarenessRating,naturalnessRating,annoyanceRating,confidenceRating,playbackCue,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
         writer.Flush();
 
         Debug.Log("Peripheral CSV created: " + filePath);
@@ -228,6 +228,10 @@ public class PeripheralStateLogger : MonoBehaviour
             Escape(directionResponse),
             FormatOptionalBool(GetDirectionCorrect(directionResponse, expectedDirection)),
             GetSubjectiveRating().ToString(CultureInfo.InvariantCulture),
+            GetAwarenessRating().ToString(CultureInfo.InvariantCulture),
+            GetNaturalnessRating().ToString(CultureInfo.InvariantCulture),
+            GetAnnoyanceRating().ToString(CultureInfo.InvariantCulture),
+            GetConfidenceRating().ToString(CultureInfo.InvariantCulture),
             Escape(playback.cueCandidate.ToString()),
             playback.playbackActive,
             playback.outputVolume.ToString("F3", CultureInfo.InvariantCulture),
@@ -346,6 +350,26 @@ public class PeripheralStateLogger : MonoBehaviour
     private int GetSubjectiveRating()
     {
         return experimentController != null ? experimentController.SubjectiveRating : 0;
+    }
+
+    private int GetAwarenessRating()
+    {
+        return experimentController != null ? experimentController.AwarenessRating : 0;
+    }
+
+    private int GetNaturalnessRating()
+    {
+        return experimentController != null ? experimentController.NaturalnessRating : 0;
+    }
+
+    private int GetAnnoyanceRating()
+    {
+        return experimentController != null ? experimentController.AnnoyanceRating : 0;
+    }
+
+    private int GetConfidenceRating()
+    {
+        return experimentController != null ? experimentController.ConfidenceRating : 0;
     }
 
     private static string FormatOptionalTime(float value)

@@ -67,7 +67,7 @@ public class PeripheralDebugUI : MonoBehaviour
 
         InitStyles();
 
-        GUI.Box(new Rect(10, 10, 900, 430), "Peripheral Debug", boxStyle);
+        GUI.Box(new Rect(10, 10, 980, 470), "Peripheral Debug", boxStyle);
 
         if (detector == null)
         {
@@ -149,8 +149,24 @@ public class PeripheralDebugUI : MonoBehaviour
 
         string reaction = experimentController.ResponseGiven ? experimentController.ReactionTime.ToString("F2") + "s" : "-";
         string direction = string.IsNullOrEmpty(experimentController.DirectionResponse) ? "-" : experimentController.DirectionResponse;
-        string rating = experimentController.SubjectiveRating > 0 ? experimentController.SubjectiveRating.ToString() : "-";
-        return reaction + " / " + direction + " / rating " + rating;
+        string overall = FormatRating(experimentController.SubjectiveRating);
+        string awareness = FormatRating(experimentController.AwarenessRating);
+        string naturalness = FormatRating(experimentController.NaturalnessRating);
+        string annoyance = FormatRating(experimentController.AnnoyanceRating);
+        string confidence = FormatRating(experimentController.ConfidenceRating);
+        return reaction +
+            " / " + direction +
+            " / mode " + experimentController.SelectedRatingDimensionLabel +
+            " / O" + overall +
+            " A" + awareness +
+            " N" + naturalness +
+            " D" + annoyance +
+            " C" + confidence;
+    }
+
+    private static string FormatRating(int value)
+    {
+        return value > 0 ? value.ToString() : "-";
     }
 
     private string GetPlaybackLabel()

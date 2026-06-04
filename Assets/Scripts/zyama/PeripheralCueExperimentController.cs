@@ -12,6 +12,15 @@ public enum PeripheralCueCandidate
     MixedCue
 }
 
+public enum PeripheralSubjectiveRatingDimension
+{
+    Overall,
+    Awareness,
+    Naturalness,
+    Annoyance,
+    Confidence
+}
+
 public class PeripheralCueExperimentController : MonoBehaviour
 {
     [Header("References")]
@@ -30,11 +39,17 @@ public class PeripheralCueExperimentController : MonoBehaviour
     public KeyCode rearDirectionKey = KeyCode.DownArrow;
 
     [Header("Rating Keys")]
+    public KeyCode overallRatingModeKey = KeyCode.F1;
+    public KeyCode awarenessRatingModeKey = KeyCode.F2;
+    public KeyCode naturalnessRatingModeKey = KeyCode.F3;
+    public KeyCode annoyanceRatingModeKey = KeyCode.F4;
+    public KeyCode confidenceRatingModeKey = KeyCode.F5;
     public KeyCode rating1Key = KeyCode.Alpha1;
     public KeyCode rating2Key = KeyCode.Alpha2;
     public KeyCode rating3Key = KeyCode.Alpha3;
     public KeyCode rating4Key = KeyCode.Alpha4;
     public KeyCode rating5Key = KeyCode.Alpha5;
+    public PeripheralSubjectiveRatingDimension selectedRatingDimension = PeripheralSubjectiveRatingDimension.Overall;
 
     private bool wasRunning;
     private bool responseGiven;
@@ -42,6 +57,10 @@ public class PeripheralCueExperimentController : MonoBehaviour
     private string responseKey = string.Empty;
     private string directionResponse = string.Empty;
     private int subjectiveRating;
+    private int awarenessRating;
+    private int naturalnessRating;
+    private int annoyanceRating;
+    private int confidenceRating;
     private PeripheralCueCandidate previousCueCandidate;
 
     public bool ResponseGiven
@@ -67,6 +86,31 @@ public class PeripheralCueExperimentController : MonoBehaviour
     public int SubjectiveRating
     {
         get { return subjectiveRating; }
+    }
+
+    public int AwarenessRating
+    {
+        get { return awarenessRating; }
+    }
+
+    public int NaturalnessRating
+    {
+        get { return naturalnessRating; }
+    }
+
+    public int AnnoyanceRating
+    {
+        get { return annoyanceRating; }
+    }
+
+    public int ConfidenceRating
+    {
+        get { return confidenceRating; }
+    }
+
+    public string SelectedRatingDimensionLabel
+    {
+        get { return selectedRatingDimension.ToString(); }
     }
 
     public string CueCandidateLabel
@@ -121,6 +165,11 @@ public class PeripheralCueExperimentController : MonoBehaviour
         responseKey = string.Empty;
         directionResponse = string.Empty;
         subjectiveRating = 0;
+        awarenessRating = 0;
+        naturalnessRating = 0;
+        annoyanceRating = 0;
+        confidenceRating = 0;
+        selectedRatingDimension = PeripheralSubjectiveRatingDimension.Overall;
     }
 
     private void CaptureDetectionResponse()
@@ -147,15 +196,53 @@ public class PeripheralCueExperimentController : MonoBehaviour
 
     private void CaptureRating()
     {
+        CaptureRatingMode();
+
         if (Input.GetKeyDown(rating1Key))
-            subjectiveRating = 1;
+            SetRating(1);
         else if (Input.GetKeyDown(rating2Key))
-            subjectiveRating = 2;
+            SetRating(2);
         else if (Input.GetKeyDown(rating3Key))
-            subjectiveRating = 3;
+            SetRating(3);
         else if (Input.GetKeyDown(rating4Key))
-            subjectiveRating = 4;
+            SetRating(4);
         else if (Input.GetKeyDown(rating5Key))
-            subjectiveRating = 5;
+            SetRating(5);
+    }
+
+    private void CaptureRatingMode()
+    {
+        if (Input.GetKeyDown(overallRatingModeKey))
+            selectedRatingDimension = PeripheralSubjectiveRatingDimension.Overall;
+        else if (Input.GetKeyDown(awarenessRatingModeKey))
+            selectedRatingDimension = PeripheralSubjectiveRatingDimension.Awareness;
+        else if (Input.GetKeyDown(naturalnessRatingModeKey))
+            selectedRatingDimension = PeripheralSubjectiveRatingDimension.Naturalness;
+        else if (Input.GetKeyDown(annoyanceRatingModeKey))
+            selectedRatingDimension = PeripheralSubjectiveRatingDimension.Annoyance;
+        else if (Input.GetKeyDown(confidenceRatingModeKey))
+            selectedRatingDimension = PeripheralSubjectiveRatingDimension.Confidence;
+    }
+
+    private void SetRating(int value)
+    {
+        switch (selectedRatingDimension)
+        {
+            case PeripheralSubjectiveRatingDimension.Awareness:
+                awarenessRating = value;
+                break;
+            case PeripheralSubjectiveRatingDimension.Naturalness:
+                naturalnessRating = value;
+                break;
+            case PeripheralSubjectiveRatingDimension.Annoyance:
+                annoyanceRating = value;
+                break;
+            case PeripheralSubjectiveRatingDimension.Confidence:
+                confidenceRating = value;
+                break;
+            default:
+                subjectiveRating = value;
+                break;
+        }
     }
 }
