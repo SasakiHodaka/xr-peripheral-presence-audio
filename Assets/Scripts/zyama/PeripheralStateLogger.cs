@@ -11,6 +11,7 @@ public class PeripheralStateLogger : MonoBehaviour
     public PeripheralTrialController trialController;
     public PeripheralCueModel cueModel;
     public PeripheralCueAudioEmitter audioEmitter;
+    public PeripheralCueExperimentController experimentController;
 
     [Header("Experiment")]
     public string participantId = "P001";
@@ -49,13 +50,16 @@ public class PeripheralStateLogger : MonoBehaviour
 
         if (audioEmitter == null)
             audioEmitter = GetComponent<PeripheralCueAudioEmitter>();
+
+        if (experimentController == null)
+            experimentController = GetComponent<PeripheralCueExperimentController>();
     }
 
     private void Start()
     {
         filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,cueType,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
+        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,cueCandidate,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,cueType,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,responseGiven,reactionTime,responseKey,directionResponse,subjectiveRating,playbackCue,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
         writer.Flush();
 
         Debug.Log("Peripheral CSV created: " + filePath);
@@ -183,6 +187,7 @@ public class PeripheralStateLogger : MonoBehaviour
             Escape(conditionLabel),
             Escape(trialId),
             Escape(GetCueConditionLabel()),
+            Escape(GetCueCandidateLabel()),
             GetRoomScale().ToString("F3", CultureInfo.InvariantCulture),
             Escape(GetMaterialClassLabel()),
             GetEnvironmentReverbAmount().ToString("F3", CultureInfo.InvariantCulture),
@@ -214,6 +219,12 @@ public class PeripheralStateLogger : MonoBehaviour
             cue.lowPassHz.ToString("F0", CultureInfo.InvariantCulture),
             cue.reverbAmount.ToString("F3", CultureInfo.InvariantCulture),
             cue.occlusionGain.ToString("F3", CultureInfo.InvariantCulture),
+            GetResponseGiven(),
+            FormatOptionalTime(GetReactionTime()),
+            Escape(GetResponseKey()),
+            Escape(GetDirectionResponse()),
+            GetSubjectiveRating().ToString(CultureInfo.InvariantCulture),
+            Escape(playback.cueCandidate.ToString()),
             playback.playbackActive,
             playback.outputVolume.ToString("F3", CultureInfo.InvariantCulture),
             playback.lowPassHz.ToString("F0", CultureInfo.InvariantCulture),
@@ -227,6 +238,11 @@ public class PeripheralStateLogger : MonoBehaviour
     private string GetCueConditionLabel()
     {
         return cueModel != null ? cueModel.comparisonCondition.ToString() : string.Empty;
+    }
+
+    private string GetCueCandidateLabel()
+    {
+        return experimentController != null ? experimentController.CueCandidateLabel : string.Empty;
     }
 
     private EnvironmentAcousticProfile GetEnvironmentProfile()
@@ -284,6 +300,36 @@ public class PeripheralStateLogger : MonoBehaviour
     private float GetTrialDuration()
     {
         return trialController != null ? trialController.trialDurationSeconds : 0f;
+    }
+
+    private bool GetResponseGiven()
+    {
+        return experimentController != null && experimentController.ResponseGiven;
+    }
+
+    private float GetReactionTime()
+    {
+        return experimentController != null ? experimentController.ReactionTime : -1f;
+    }
+
+    private string GetResponseKey()
+    {
+        return experimentController != null ? experimentController.ResponseKey : string.Empty;
+    }
+
+    private string GetDirectionResponse()
+    {
+        return experimentController != null ? experimentController.DirectionResponse : string.Empty;
+    }
+
+    private int GetSubjectiveRating()
+    {
+        return experimentController != null ? experimentController.SubjectiveRating : 0;
+    }
+
+    private static string FormatOptionalTime(float value)
+    {
+        return value >= 0f ? value.ToString("F3", CultureInfo.InvariantCulture) : string.Empty;
     }
 
     private static bool HasState(PeripheralState value, PeripheralState state)

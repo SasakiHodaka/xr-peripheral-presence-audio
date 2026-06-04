@@ -15,6 +15,7 @@ public class PeripheralTrialConditionController : MonoBehaviour
     [Header("References")]
     public PeripheralStateDetector detector;
     public PeripheralStateLogger logger;
+    public PeripheralCueExperimentController experimentController;
 
     [Header("Condition")]
     public PeripheralTrialCondition condition = PeripheralTrialCondition.AllDemoTargets;
@@ -34,6 +35,9 @@ public class PeripheralTrialConditionController : MonoBehaviour
 
         if (logger == null)
             logger = GetComponent<PeripheralStateLogger>();
+
+        if (experimentController == null)
+            experimentController = GetComponent<PeripheralCueExperimentController>();
     }
 
     private void Start()
@@ -51,7 +55,9 @@ public class PeripheralTrialConditionController : MonoBehaviour
         UpdateDetectorTargets();
 
         if (updateLoggerConditionLabel && logger != null)
-            logger.conditionLabel = condition.ToString();
+            logger.conditionLabel = experimentController != null
+                ? experimentController.BuildConditionLabel(condition.ToString())
+                : condition.ToString();
     }
 
     private bool ShouldEnable(PeripheralTrialCondition targetCondition)

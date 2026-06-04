@@ -5,6 +5,7 @@ public struct PeripheralCuePlaybackState
 {
     public string targetId;
     public PeripheralCueType cueType;
+    public PeripheralCueCandidate cueCandidate;
     public bool playbackActive;
     public float outputVolume;
     public float lowPassHz;
@@ -17,9 +18,12 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
     [Header("References")]
     public PeripheralStateDetector detector;
     public PeripheralCueModel cueModel;
+    public PeripheralCueExperimentController experimentController;
 
     [Header("Cue Clips")]
     public AudioClip footstepClip;
+    public AudioClip breathingClip;
+    public AudioClip clothRustleClip;
     public AudioClip voiceClip;
     public AudioClip ambientPresenceClip;
 
@@ -46,6 +50,22 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
 
     private readonly Dictionary<PeripheralTarget, TargetAudioState> targetStates = new Dictionary<PeripheralTarget, TargetAudioState>();
     private readonly Dictionary<string, PeripheralCuePlaybackState> latestPlaybackStates = new Dictionary<string, PeripheralCuePlaybackState>();
+    private PeripheralCuePlaybackState latestPrimaryPlayback;
+
+    public string PlaybackCueLabel
+    {
+        get { return latestPrimaryPlayback.cueCandidate.ToString(); }
+    }
+
+    public bool PlaybackActive
+    {
+        get { return latestPrimaryPlayback.playbackActive; }
+    }
+
+    public float PlaybackVolume
+    {
+        get { return latestPrimaryPlayback.outputVolume; }
+    }
 
     private void Awake()
     {
@@ -54,19 +74,29 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
 
         if (cueModel == null)
             cueModel = GetComponent<PeripheralCueModel>();
+
+        if (experimentController == null)
+            experimentController = GetComponent<PeripheralCueExperimentController>();
     }
 
     private void Update()
     {
         latestPlaybackStates.Clear();
+        latestPrimaryPlayback = EmptyPlaybackState(string.Empty);
 
         if (detector == null || cueModel == null)
             return;
 
         IReadOnlyList<PeripheralDetectionResult> results = detector.LatestResults;
+        float bestPresence = -1f;
         for (int i = 0; i < results.Count; i++)
         {
-            UpdateTargetAudio(results[i]);
+            PeripheralCuePlaybackState state = UpdateTargetAudio(results[i]);
+            if (state.outputVolume > bestPresence)
+            {
+                latestPrimaryPlayback = state;
+                bestPresence = state.outputVolume;
+            }
         }
     }
 
@@ -75,42 +105,44 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
         if (!string.IsNullOrEmpty(targetId) && latestPlaybackStates.TryGetValue(targetId, out PeripheralCuePlaybackState state))
             return state;
 
-        PeripheralCuePlaybackState empty = new PeripheralCuePlaybackState();
-        empty.targetId = targetId;
-        empty.cueType = PeripheralCueType.None;
-        empty.lowPassHz = clearLowPassHz;
-        return empty;
+        return EmptyPlaybackState(targetId);
     }
 
-    private void UpdateTargetAudio(PeripheralDetectionResult result)
+    private PeripheralCuePlaybackState UpdateTargetAudio(PeripheralDetectionResult result)
     {
+        PeripheralCuePlaybackState playbackState = EmptyPlaybackState(result.targetId);
         if (result.target == null)
-            return;
+            return playbackState;
 
         TargetAudioState audioState = GetOrCreateTargetAudio(result.target);
         PeripheralCuePrediction prediction = cueModel.Predict(result);
-        bool playbackActive = enablePlayback && prediction.cueType != PeripheralCueType.None && prediction.volumeGain > silentVolumeThreshold;
+        PeripheralCueCandidate candidate = experimentController != null ? experimentController.cueCandidate : PeripheralCueCandidate.PredictedCue;
+        PeripheralCueType cueType = ResolveCueType(candidate, prediction);
+        bool playbackActive = enablePlayback && cueType != PeripheralCueType.None && prediction.volumeGain > silentVolumeThreshold;
         float targetVolume = playbackActive ? Mathf.Clamp01(prediction.volumeGain * baseVolume) : 0f;
         float lowPassHz = prediction.lowPassHz > 0f ? prediction.lowPassHz : CalculateLowPassHz(result);
 
         audioState.SetLowPass(lowPassHz);
         audioState.SetReverb(prediction.reverbAmount);
-        audioState.UpdateContinuousSource(PeripheralCueType.Voice, prediction.cueType == PeripheralCueType.Voice ? targetVolume : 0f, volumeLerpSpeed);
-        audioState.UpdateContinuousSource(PeripheralCueType.AmbientPresence, prediction.cueType == PeripheralCueType.AmbientPresence ? targetVolume : 0f, volumeLerpSpeed);
+        audioState.UpdateContinuousSource(PeripheralCueCandidate.Breathing, candidate == PeripheralCueCandidate.Breathing ? targetVolume : 0f, volumeLerpSpeed);
+        audioState.UpdateContinuousSource(PeripheralCueCandidate.ClothRustle, candidate == PeripheralCueCandidate.ClothRustle ? targetVolume : 0f, volumeLerpSpeed);
+        audioState.UpdateContinuousSource(PeripheralCueCandidate.Voice, cueType == PeripheralCueType.Voice ? targetVolume : 0f, volumeLerpSpeed);
+        audioState.UpdateContinuousSource(PeripheralCueCandidate.AmbientPresence, cueType == PeripheralCueType.AmbientPresence ? targetVolume : 0f, volumeLerpSpeed);
 
         float footstepInterval = CalculateFootstepInterval(result);
-        if (prediction.cueType == PeripheralCueType.Footstep && playbackActive)
+        if (cueType == PeripheralCueType.Footstep && playbackActive)
             audioState.UpdateFootstep(footstepClip, targetVolume, footstepInterval);
 
-        PeripheralCuePlaybackState playbackState = new PeripheralCuePlaybackState();
         playbackState.targetId = result.targetId;
-        playbackState.cueType = prediction.cueType;
+        playbackState.cueType = cueType;
+        playbackState.cueCandidate = candidate;
         playbackState.playbackActive = playbackActive;
         playbackState.outputVolume = targetVolume;
         playbackState.lowPassHz = lowPassHz;
         playbackState.reverbAmount = prediction.reverbAmount;
         playbackState.footstepInterval = footstepInterval;
         latestPlaybackStates[result.targetId] = playbackState;
+        return playbackState;
     }
 
     private TargetAudioState GetOrCreateTargetAudio(PeripheralTarget target)
@@ -156,6 +188,38 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
         return source;
     }
 
+    private static PeripheralCueType ResolveCueType(PeripheralCueCandidate candidate, PeripheralCuePrediction prediction)
+    {
+        switch (candidate)
+        {
+            case PeripheralCueCandidate.NoCue:
+                return PeripheralCueType.None;
+            case PeripheralCueCandidate.PredictedCue:
+                return prediction.cueType;
+            case PeripheralCueCandidate.Footstep:
+                return PeripheralCueType.Footstep;
+            case PeripheralCueCandidate.Voice:
+                return PeripheralCueType.Voice;
+            case PeripheralCueCandidate.Breathing:
+            case PeripheralCueCandidate.ClothRustle:
+            case PeripheralCueCandidate.AmbientPresence:
+            case PeripheralCueCandidate.MixedCue:
+                return PeripheralCueType.AmbientPresence;
+            default:
+                return PeripheralCueType.None;
+        }
+    }
+
+    private static PeripheralCuePlaybackState EmptyPlaybackState(string targetId)
+    {
+        PeripheralCuePlaybackState empty = new PeripheralCuePlaybackState();
+        empty.targetId = targetId;
+        empty.cueType = PeripheralCueType.None;
+        empty.cueCandidate = PeripheralCueCandidate.NoCue;
+        empty.lowPassHz = 22000f;
+        return empty;
+    }
+
     private static bool HasState(PeripheralState value, PeripheralState state)
     {
         return (value & state) != 0;
@@ -165,6 +229,8 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
     {
         private readonly PeripheralCueAudioEmitter owner;
         private readonly AudioSource footstepSource;
+        private readonly AudioSource breathingSource;
+        private readonly AudioSource clothSource;
         private readonly AudioSource voiceSource;
         private readonly AudioSource ambientSource;
         private float footstepTimer;
@@ -173,6 +239,8 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
         {
             this.owner = owner;
             footstepSource = owner.CreateSource(parent, "PeripheralFootstepSource", owner.footstepClip, false);
+            breathingSource = owner.CreateSource(parent, "PeripheralBreathingSource", owner.breathingClip, true);
+            clothSource = owner.CreateSource(parent, "PeripheralClothSource", owner.clothRustleClip, true);
             voiceSource = owner.CreateSource(parent, "PeripheralVoiceSource", owner.voiceClip, true);
             ambientSource = owner.CreateSource(parent, "PeripheralAmbientSource", owner.ambientPresenceClip, true);
         }
@@ -180,6 +248,8 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
         public void SetLowPass(float cutoffHz)
         {
             SetLowPass(footstepSource, cutoffHz);
+            SetLowPass(breathingSource, cutoffHz);
+            SetLowPass(clothSource, cutoffHz);
             SetLowPass(voiceSource, cutoffHz);
             SetLowPass(ambientSource, cutoffHz);
         }
@@ -187,13 +257,15 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
         public void SetReverb(float reverbAmount)
         {
             SetReverb(footstepSource, reverbAmount);
+            SetReverb(breathingSource, reverbAmount);
+            SetReverb(clothSource, reverbAmount);
             SetReverb(voiceSource, reverbAmount);
             SetReverb(ambientSource, reverbAmount);
         }
 
-        public void UpdateContinuousSource(PeripheralCueType cueType, float targetVolume, float lerpSpeed)
+        public void UpdateContinuousSource(PeripheralCueCandidate candidate, float targetVolume, float lerpSpeed)
         {
-            AudioSource source = cueType == PeripheralCueType.Voice ? voiceSource : ambientSource;
+            AudioSource source = GetSource(candidate);
             if (source == null)
                 return;
 
@@ -218,6 +290,24 @@ public class PeripheralCueAudioEmitter : MonoBehaviour
             footstepSource.pitch = Mathf.Lerp(0.92f, 1.18f, Mathf.InverseLerp(owner.footstepBaseInterval, owner.footstepMinInterval, interval));
             footstepSource.PlayOneShot(clip, volume);
             footstepTimer = 0f;
+        }
+
+        private AudioSource GetSource(PeripheralCueCandidate candidate)
+        {
+            switch (candidate)
+            {
+                case PeripheralCueCandidate.Breathing:
+                    return breathingSource;
+                case PeripheralCueCandidate.ClothRustle:
+                    return clothSource;
+                case PeripheralCueCandidate.Voice:
+                    return voiceSource;
+                case PeripheralCueCandidate.AmbientPresence:
+                case PeripheralCueCandidate.MixedCue:
+                    return ambientSource;
+                default:
+                    return null;
+            }
         }
 
         private static void SetLowPass(AudioSource source, float cutoffHz)

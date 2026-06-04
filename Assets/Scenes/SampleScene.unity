@@ -290,6 +290,9 @@ GameObject:
   - component: {fileID: 222053352}
   - component: {fileID: 222053353}
   - component: {fileID: 222053354}
+  - component: {fileID: 222053356}
+  - component: {fileID: 222053355}
+  - component: {fileID: 222053357}
   m_Layer: 0
   m_Name: PeripheralSystem
   m_TagString: Untagged
@@ -312,6 +315,8 @@ MonoBehaviour:
   detector: {fileID: 222053349}
   trialController: {fileID: 222053352}
   cueModel: {fileID: 222053354}
+  experimentController: {fileID: 222053356}
+  cueAudioEmitter: {fileID: 222053355}
   participantId: P001
   conditionLabel: AllDemoTargets
   trialId: T001
@@ -360,7 +365,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 633702924}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &222053351
@@ -379,6 +385,9 @@ MonoBehaviour:
   trialController: {fileID: 222053352}
   conditionController: {fileID: 222053353}
   cueModel: {fileID: 222053354}
+  experimentController: {fileID: 222053356}
+  cueAudioEmitter: {fileID: 222053355}
+  trialSequencer: {fileID: 222053357}
   showDebugUI: 1
   fontSize: 22
 --- !u!114 &222053352
@@ -411,7 +420,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   detector: {fileID: 222053349}
   logger: {fileID: 222053348}
-  condition: 5
+  experimentController: {fileID: 222053356}
+  condition: 0
   applyOnStart: 1
   updateLoggerConditionLabel: 1
   approachTarget: {fileID: 1034655000}
@@ -430,12 +440,92 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7a2f9c0637440e49ba0407bb7c78590, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  comparisonCondition: 1
   nearDistance: 1
   farDistance: 5
+  learnedModelJson: {fileID: 4900000, guid: 0ba796917042921478f3a3c4b9699013, type: 3}
+  learnedConditionLabel: demo
+  learnedFeatureCueCondition: StateBasedCue
   outOfViewBoost: 0.25
   approachingBoost: 0.35
   speakingBoost: 0.35
   crossingBoost: 0.2
+--- !u!114 &222053355
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 222053347}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57a9d5ac997b4a8d9a39072bd8648d9c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  detector: {fileID: 222053349}
+  trialController: {fileID: 222053352}
+  cueModel: {fileID: 222053354}
+  experimentController: {fileID: 222053356}
+  footstepClip: {fileID: 8300000, guid: 55af8a7909f894041b62f9d91d2577ca, type: 3}
+  breathingClip: {fileID: 8300000, guid: 5d6620a360bad8c42a8c2b67e34338e3, type: 3}
+  clothRustleClip: {fileID: 8300000, guid: b3b6963b47b740e418cbbf59479ce980, type: 3}
+  voiceClip: {fileID: 0}
+  ambientPresenceClip: {fileID: 8300000, guid: 5d6620a360bad8c42a8c2b67e34338e3, type: 3}
+  masterGain: 0.8
+  footstepBaseInterval: 0.55
+  footstepMinInterval: 0.22
+  volumeLerpSpeed: 8
+  minAudibleVolume: 0.02
+--- !u!114 &222053356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 222053347}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ed09e23d1e84ac4a9eb5e7c4d735fd9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  trialController: {fileID: 222053352}
+  conditionController: {fileID: 222053353}
+  cueCandidate: 1
+  includeCueCandidateInConditionLabel: 0
+  detectionResponseKey: 32
+  leftDirectionKey: 276
+  rightDirectionKey: 275
+  frontDirectionKey: 273
+  rearDirectionKey: 274
+  rating1Key: 49
+  rating2Key: 50
+  rating3Key: 51
+  rating4Key: 52
+  rating5Key: 53
+--- !u!114 &222053357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 222053347}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c337ac09a1c4463db9837730fca4861a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  trialController: {fileID: 222053352}
+  conditionController: {fileID: 222053353}
+  experimentController: {fileID: 222053356}
+  conditions: 02000000010000000300000004000000
+  cueCandidates: 00000000020000000300000004000000050000000600000007000000
+  conditionIndex: 0
+  cueCandidateIndex: 0
+  applyOnStart: 1
+  autoAdvanceOnTrialComplete: 0
+  nextTrialKey: 110
+  previousTrialKey: 98
+  restartTrialKey: 114
 --- !u!1 &252865230
 GameObject:
   m_ObjectHideFlags: 0
@@ -1522,12 +1612,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 633702920}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 3, y: 1, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 222053350}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &705507993
 GameObject:
@@ -3181,6 +3271,5 @@ SceneRoots:
   - {fileID: 252865239}
   - {fileID: 324948336}
   - {fileID: 1801384379}
-  - {fileID: 633702924}
   - {fileID: 222053350}
   - {fileID: 850155925}

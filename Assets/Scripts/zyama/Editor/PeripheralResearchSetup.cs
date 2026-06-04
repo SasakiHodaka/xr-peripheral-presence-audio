@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public static class PeripheralResearchSetup
@@ -6,6 +7,8 @@ public static class PeripheralResearchSetup
     [MenuItem("Tools/Peripheral Research/Create Demo Hierarchy")]
     public static void CreateDemoHierarchy()
     {
+        OpenDefaultSceneIfNeeded();
+
         Transform userHead = Camera.main != null ? Camera.main.transform : null;
         if (userHead == null)
         {
@@ -18,33 +21,54 @@ public static class PeripheralResearchSetup
         PeripheralStateDetector detector = GetOrAdd<PeripheralStateDetector>(systemObject);
         PeripheralCueModel cueModel = GetOrAdd<PeripheralCueModel>(systemObject);
         EnvironmentAcousticProfile environmentProfile = GetOrAdd<EnvironmentAcousticProfile>(systemObject);
+        PeripheralCueExperimentController experimentController = GetOrAdd<PeripheralCueExperimentController>(systemObject);
         PeripheralCueAudioEmitter audioEmitter = GetOrAdd<PeripheralCueAudioEmitter>(systemObject);
         PeripheralStateLogger logger = GetOrAdd<PeripheralStateLogger>(systemObject);
         PeripheralTrialController trialController = GetOrAdd<PeripheralTrialController>(systemObject);
         PeripheralTrialConditionController conditionController = GetOrAdd<PeripheralTrialConditionController>(systemObject);
         PeripheralAuiLogCollectionController auiLogController = GetOrAdd<PeripheralAuiLogCollectionController>(systemObject);
+        PeripheralCueTrialSequencer trialSequencer = GetOrAdd<PeripheralCueTrialSequencer>(systemObject);
         PeripheralDebugUI debugUI = GetOrAdd<PeripheralDebugUI>(systemObject);
+
+        cueModel.environmentProfile = environmentProfile;
+
         logger.detector = detector;
         logger.cueModel = cueModel;
         logger.audioEmitter = audioEmitter;
+        logger.experimentController = experimentController;
         logger.trialController = trialController;
-        cueModel.environmentProfile = environmentProfile;
+
+        experimentController.trialController = trialController;
+        experimentController.conditionController = conditionController;
+
         audioEmitter.detector = detector;
         audioEmitter.cueModel = cueModel;
+        audioEmitter.experimentController = experimentController;
         AssignDefaultClips(audioEmitter);
+
         conditionController.detector = detector;
         conditionController.logger = logger;
+        conditionController.experimentController = experimentController;
+
         auiLogController.cueModel = cueModel;
         auiLogController.environmentProfile = environmentProfile;
         auiLogController.conditionController = conditionController;
         auiLogController.trialController = trialController;
         auiLogController.logger = logger;
+
+        trialSequencer.trialController = trialController;
+        trialSequencer.conditionController = conditionController;
+        trialSequencer.experimentController = experimentController;
+
         debugUI.detector = detector;
         debugUI.cueModel = cueModel;
         debugUI.audioEmitter = audioEmitter;
         debugUI.auiLogController = auiLogController;
         debugUI.trialController = trialController;
         debugUI.conditionController = conditionController;
+        debugUI.experimentController = experimentController;
+        debugUI.trialSequencer = trialSequencer;
+
         detector.userHead = userHead;
         detector.autoFindTargets = false;
         detector.targets.Clear();
@@ -59,19 +83,49 @@ public static class PeripheralResearchSetup
         Selection.activeGameObject = systemObject;
         EditorUtility.SetDirty(systemObject);
         EditorUtility.SetDirty(targetsRoot);
+        EditorSceneManager.MarkSceneDirty(systemObject.scene);
+        EditorSceneManager.SaveOpenScenes();
         Debug.Log("Peripheral research demo hierarchy created. Assign XR Origin/Main Camera to PeripheralStateDetector.userHead if it is empty.");
+    }
+
+    private static void OpenDefaultSceneIfNeeded()
+    {
+        const string scenePath = "Assets/Scenes/SampleScene.unity";
+        if (!Application.isBatchMode)
+            return;
+
+        if (EditorSceneManager.GetActiveScene().path == scenePath)
+            return;
+
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) != null)
+            EditorSceneManager.OpenScene(scenePath);
     }
 
     private static void AssignDefaultClips(PeripheralCueAudioEmitter audioEmitter)
     {
+        if (audioEmitter == null) return;
+
         if (audioEmitter.footstepClip == null)
-            audioEmitter.footstepClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/freesound_community-footsteps-concrete-26375.mp3");
+            audioEmitter.footstepClip = FindAudioClip("footsteps");
+
+        if (audioEmitter.breathingClip == null)
+            audioEmitter.breathingClip = FindAudioClip("breathing");
+
+        if (audioEmitter.clothRustleClip == null)
+            audioEmitter.clothRustleClip = FindAudioClip("clothing");
 
         if (audioEmitter.ambientPresenceClip == null)
-            audioEmitter.ambientPresenceClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/freesound_community-clothing-rustles-107170.mp3");
+            audioEmitter.ambientPresenceClip = audioEmitter.breathingClip != null ? audioEmitter.breathingClip : audioEmitter.clothRustleClip;
+    }
 
-        if (audioEmitter.voiceClip == null)
-            audioEmitter.voiceClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/「よろしくお願いします」.mp3");
+    private static AudioClip FindAudioClip(string namePart)
+    {
+        string[] guids = AssetDatabase.FindAssets(namePart + " t:AudioClip", new[] { "Assets/Audio" });
+        if (guids == null || guids.Length == 0)
+            return null;
+
+        string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+        return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
     }
 
     private static PeripheralTarget CreateTarget(
@@ -133,7 +187,7 @@ public static class PeripheralResearchSetup
         if (component != null)
             return component;
 
-        component = Undo.AddComponent<T>(gameObject);
+        component = Application.isBatchMode ? gameObject.AddComponent<T>() : Undo.AddComponent<T>(gameObject);
         return component;
     }
 }

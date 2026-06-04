@@ -10,6 +10,7 @@ DEFAULT_LOG_DIR = Path.home() / "AppData" / "LocalLow" / "DefaultCompany" / "My 
 STATE_COLUMNS = ("outOfView", "approaching", "speaking", "gazing", "near", "crossing")
 METADATA_COLUMNS = ("participantId", "conditionLabel", "trialId")
 MIN_TRIAL_DURATION_SECONDS = 10.0
+DEFAULT_REACTION_TIME_SECONDS = 10.0
 
 
 def parse_bool(value):
@@ -100,6 +101,126 @@ def summarize(rows):
         )
 
     return summaries
+
+
+def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+    groups = defaultdict(list)
+    for row in rows:
+        condition = row.get("conditionLabel", "")
+        cue_candidate = row.get("cueCandidate", "")
+        target_id = row.get("targetId", "")
+        if not cue_candidate:
+            continue
+        groups[(condition, target_id, cue_candidate)].append(row)
+
+    output = []
+    for (condition, target_id, cue_candidate), group_rows in sorted(groups.items()):
+        response_count = sum(1 for row in group_rows if parse_bool(row.get("responseGiven")))
+        detection_success = response_count / max(1, len(group_rows))
+        reaction_times = [
+            parse_float(row.get("reactionTime"), None)
+            for row in group_rows
+            if row.get("reactionTime")
+        ]
+        reaction_times = [value for value in reaction_times if value is not None and value >= 0.0]
+        mean_reaction_time = sum(reaction_times) / len(reaction_times) if reaction_times else reaction_time_cap
+        normalized_reaction_time = min(mean_reaction_time, reaction_time_cap) / reaction_time_cap
+
+        direction_values = [
+            row.get("directionResponse", "").strip()
+            for row in group_rows
+            if row.get("directionResponse", "").strip()
+        ]
+        direction_response_rate = len(direction_values) / max(1, len(group_rows))
+
+        ratings = [
+            parse_float(row.get("subjectiveRating"), None)
+            for row in group_rows
+            if row.get("subjectiveRating")
+        ]
+        ratings = [value for value in ratings if value is not None and value > 0.0]
+        mean_rating = sum(ratings) / len(ratings) if ratings else 0.0
+        normalized_rating = mean_rating / 5.0 if mean_rating > 0.0 else 0.0
+
+        playback_rows = sum(1 for row in group_rows if parse_bool(row.get("playbackActive")))
+        playback_rate = playback_rows / max(1, len(group_rows))
+
+        cue_effectiveness = (
+            detection_success
+            + direction_response_rate
+            - normalized_reaction_time
+            + normalized_rating
+        )
+
+        output.append(
+            {
+                "conditionLabel": condition,
+                "targetId": target_id,
+                "cueCandidate": cue_candidate,
+                "rows": len(group_rows),
+                "detectionSuccess": detection_success,
+                "meanReactionTime": mean_reaction_time,
+                "directionResponseRate": direction_response_rate,
+                "meanRating": mean_rating,
+                "playbackRate": playback_rate,
+                "cueEffectiveness": cue_effectiveness,
+            }
+        )
+
+    return output
+
+
+def best_cue_labels(effectiveness_rows):
+    best_by_situation = {}
+    for row in effectiveness_rows:
+        key = (row["conditionLabel"], row["targetId"])
+        current = best_by_situation.get(key)
+        if current is None or row["cueEffectiveness"] > current["cueEffectiveness"]:
+            best_by_situation[key] = row
+
+    return [best_by_situation[key] for key in sorted(best_by_situation)]
+
+
+def clamp01(value):
+    return max(0.0, min(1.0, value))
+
+
+def cue_type_from_candidate(cue_candidate):
+    mapping = {
+        "NoCue": "None",
+        "PredictedCue": "",
+        "Footstep": "Footstep",
+        "Breathing": "AmbientPresence",
+        "ClothRustle": "AmbientPresence",
+        "Voice": "Voice",
+        "AmbientPresence": "AmbientPresence",
+        "MixedCue": "AmbientPresence",
+    }
+    return mapping.get(cue_candidate, cue_candidate)
+
+
+def target_values_from_effectiveness(row, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+    mean_reaction = parse_float(row.get("meanReactionTime"), reaction_time_cap)
+    normalized_reaction = min(mean_reaction, reaction_time_cap) / reaction_time_cap
+    detection = parse_float(row.get("detectionSuccess"))
+    direction = parse_float(row.get("directionResponseRate"))
+    rating = parse_float(row.get("meanRating")) / 5.0
+
+    presence_score = clamp01(
+        0.15
+        + 0.35 * detection
+        + 0.2 * direction
+        + 0.25 * rating
+        - 0.2 * normalized_reaction
+    )
+
+    cue_type = cue_type_from_candidate(row.get("cueCandidate", ""))
+    if cue_type == "None":
+        volume_gain = 0.0
+    else:
+        volume_gain = clamp01(0.2 + 0.75 * presence_score)
+
+    return cue_type, presence_score, volume_gain
 
 
 def summarize_source(source_path):
@@ -465,6 +586,102 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None, min_duration=MI
     return output_path, file_count, len(rows)
 
 
+def write_cue_effectiveness_csv(source_path, rows, output_path=None, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+    if output_path is None:
+        output_path = source_path.with_name(source_path.stem + "_cue_effectiveness.csv")
+
+    fieldnames = [
+        "conditionLabel",
+        "targetId",
+        "cueCandidate",
+        "isBestCue",
+        "rows",
+        "detectionSuccess",
+        "meanReactionTime",
+        "directionResponseRate",
+        "meanRating",
+        "playbackRate",
+        "cueEffectiveness",
+    ]
+
+    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap)
+    best_keys = {
+        (row["conditionLabel"], row["targetId"], row["cueCandidate"])
+        for row in best_cue_labels(effectiveness)
+    }
+
+    with output_path.open("w", encoding="utf-8-sig", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in effectiveness:
+            key = (item["conditionLabel"], item["targetId"], item["cueCandidate"])
+            writer.writerow(
+                {
+                    "conditionLabel": item["conditionLabel"],
+                    "targetId": item["targetId"],
+                    "cueCandidate": item["cueCandidate"],
+                    "isBestCue": key in best_keys,
+                    "rows": item["rows"],
+                    "detectionSuccess": f"{item['detectionSuccess']:.3f}",
+                    "meanReactionTime": f"{item['meanReactionTime']:.3f}",
+                    "directionResponseRate": f"{item['directionResponseRate']:.3f}",
+                    "meanRating": f"{item['meanRating']:.3f}",
+                    "playbackRate": f"{item['playbackRate']:.3f}",
+                    "cueEffectiveness": f"{item['cueEffectiveness']:.3f}",
+                }
+            )
+
+    return output_path, len(effectiveness), len(best_keys)
+
+
+def write_label_dataset_csv(source_path, rows, output_path=None, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+    if output_path is None:
+        output_path = source_path.with_name(source_path.stem + "_cue_labels.csv")
+
+    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap)
+    labels = best_cue_labels(effectiveness)
+
+    fieldnames = [
+        "conditionLabel",
+        "targetId",
+        "cueCandidate",
+        "cueType",
+        "presenceScore",
+        "volumeGain",
+        "cueEffectiveness",
+        "detectionSuccess",
+        "meanReactionTime",
+        "directionResponseRate",
+        "meanRating",
+        "rows",
+    ]
+
+    with output_path.open("w", encoding="utf-8-sig", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for item in labels:
+            cue_type, presence_score, volume_gain = target_values_from_effectiveness(item, reaction_time_cap)
+            writer.writerow(
+                {
+                    "conditionLabel": item["conditionLabel"],
+                    "targetId": item["targetId"],
+                    "cueCandidate": item["cueCandidate"],
+                    "cueType": cue_type,
+                    "presenceScore": f"{presence_score:.3f}",
+                    "volumeGain": f"{volume_gain:.3f}",
+                    "cueEffectiveness": f"{item['cueEffectiveness']:.3f}",
+                    "detectionSuccess": f"{item['detectionSuccess']:.3f}",
+                    "meanReactionTime": f"{item['meanReactionTime']:.3f}",
+                    "directionResponseRate": f"{item['directionResponseRate']:.3f}",
+                    "meanRating": f"{item['meanRating']:.3f}",
+                    "rows": item["rows"],
+                }
+            )
+
+    return output_path, len(labels)
+
+
 def format_html_cell(row, column):
     value = str(row.get(column, ""))
     if column in ("demoCheck", "durationCheck"):
@@ -511,6 +728,30 @@ def main():
         help="Write an HTML report for all peripheral source CSVs.",
     )
     parser.add_argument(
+        "--cue-effectiveness",
+        action="store_true",
+        help="Write cue-candidate effectiveness scores for a source CSV.",
+    )
+    parser.add_argument(
+        "--cue-effectiveness-csv",
+        help="Output path for --cue-effectiveness. Defaults to <input>_cue_effectiveness.csv.",
+    )
+    parser.add_argument(
+        "--label-dataset",
+        action="store_true",
+        help="Write best-cue labels with presenceScore and volumeGain targets.",
+    )
+    parser.add_argument(
+        "--label-dataset-csv",
+        help="Output path for --label-dataset. Defaults to <input>_cue_labels.csv.",
+    )
+    parser.add_argument(
+        "--reaction-time-cap",
+        type=float,
+        default=DEFAULT_REACTION_TIME_SECONDS,
+        help="Reaction time cap used for cueEffectiveness normalization. Defaults to 10.",
+    )
+    parser.add_argument(
         "--html-report-path",
         help="Output path for --html-report. Defaults to peripheral_report.html in the log directory.",
     )
@@ -545,6 +786,32 @@ def main():
 
     path = Path(args.csv_path) if args.csv_path else latest_csv_path(log_dir)
     rows = load_rows(path)
+
+    if args.cue_effectiveness:
+        output_path = Path(args.cue_effectiveness_csv) if args.cue_effectiveness_csv else None
+        written_path, row_count, label_count = write_cue_effectiveness_csv(
+            path,
+            rows,
+            output_path,
+            args.reaction_time_cap,
+        )
+        print(f"Cue effectiveness CSV: {written_path}")
+        print(f"Cue candidate rows: {row_count}")
+        print(f"Best cue labels: {label_count}")
+        return
+
+    if args.label_dataset:
+        output_path = Path(args.label_dataset_csv) if args.label_dataset_csv else None
+        written_path, label_count = write_label_dataset_csv(
+            path,
+            rows,
+            output_path,
+            args.reaction_time_cap,
+        )
+        print(f"Label dataset CSV: {written_path}")
+        print(f"Best cue labels: {label_count}")
+        return
+
     summaries = summarize_source(path)
     print_summary(path, rows, summaries)
 

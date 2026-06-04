@@ -10,6 +10,8 @@ public class PeripheralDebugUI : MonoBehaviour
     public PeripheralCueModel cueModel;
     public PeripheralCueAudioEmitter audioEmitter;
     public PeripheralAuiLogCollectionController auiLogController;
+    public PeripheralCueExperimentController experimentController;
+    public PeripheralCueTrialSequencer trialSequencer;
 
     [Header("UI")]
     public bool showDebugUI = true;
@@ -37,6 +39,12 @@ public class PeripheralDebugUI : MonoBehaviour
 
         if (auiLogController == null)
             auiLogController = GetComponent<PeripheralAuiLogCollectionController>();
+
+        if (experimentController == null)
+            experimentController = GetComponent<PeripheralCueExperimentController>();
+
+        if (trialSequencer == null)
+            trialSequencer = GetComponent<PeripheralCueTrialSequencer>();
     }
 
     private void InitStyles()
@@ -59,7 +67,7 @@ public class PeripheralDebugUI : MonoBehaviour
 
         InitStyles();
 
-        GUI.Box(new Rect(10, 10, 760, 430), "Peripheral Debug", boxStyle);
+        GUI.Box(new Rect(10, 10, 900, 430), "Peripheral Debug", boxStyle);
 
         if (detector == null)
         {
@@ -75,10 +83,10 @@ public class PeripheralDebugUI : MonoBehaviour
 
         IReadOnlyList<PeripheralDetectionResult> results = detector.LatestResults;
         DrawLine(0, "User Head: " + detector.userHead.name, Color.white);
-        DrawLine(1, "Condition: " + GetConditionLabel(), Color.white);
-        DrawLine(2, "Cue: " + GetCueConditionLabel(), Color.white);
-        DrawLine(3, "AUI Trial: " + GetAuiTrialLabel(), Color.white);
-        DrawLine(4, "Targets: " + detector.targets.Count + " / Results: " + results.Count, Color.white);
+        DrawLine(1, "Condition: " + GetConditionLabel() + " | Sequence: " + GetSequenceLabel(), Color.white);
+        DrawLine(2, "Cue: " + GetCueConditionLabel() + " | Candidate: " + GetCueCandidateLabel(), Color.white);
+        DrawLine(3, "AUI Trial: " + GetAuiTrialLabel() + " | Response: " + GetResponseLabel(), Color.white);
+        DrawLine(4, "Targets: " + detector.targets.Count + " / Results: " + results.Count + " | Playback: " + GetPlaybackLabel(), Color.white);
         DrawTrialLine(5);
 
         int visibleRows = Mathf.Min(results.Count, 5);
@@ -112,12 +120,41 @@ public class PeripheralDebugUI : MonoBehaviour
         return cueModel != null ? cueModel.comparisonCondition.ToString() : "(none)";
     }
 
+    private string GetCueCandidateLabel()
+    {
+        return experimentController != null ? experimentController.CueCandidateLabel : "(none)";
+    }
+
+    private string GetSequenceLabel()
+    {
+        return trialSequencer != null ? trialSequencer.CurrentTrialLabel : "(manual)";
+    }
+
     private string GetAuiTrialLabel()
     {
         if (auiLogController == null)
             return "(manual)";
 
         return (auiLogController.CurrentTrialIndex + 1) + " / " + auiLogController.TotalTrialCount;
+    }
+
+    private string GetResponseLabel()
+    {
+        if (experimentController == null)
+            return "(none)";
+
+        string reaction = experimentController.ResponseGiven ? experimentController.ReactionTime.ToString("F2") + "s" : "-";
+        string direction = string.IsNullOrEmpty(experimentController.DirectionResponse) ? "-" : experimentController.DirectionResponse;
+        string rating = experimentController.SubjectiveRating > 0 ? experimentController.SubjectiveRating.ToString() : "-";
+        return reaction + " / " + direction + " / rating " + rating;
+    }
+
+    private string GetPlaybackLabel()
+    {
+        if (audioEmitter == null)
+            return "(none)";
+
+        return audioEmitter.PlaybackCueLabel + " " + audioEmitter.PlaybackVolume.ToString("F2");
     }
 
     private void DrawTrialLine(int row)
@@ -143,7 +180,7 @@ public class PeripheralDebugUI : MonoBehaviour
     private void DrawLine(int row, string text, Color color)
     {
         GUI.color = color;
-        GUI.Label(new Rect(30, 58 + row * 36, 720, 34), text, labelStyle);
+        GUI.Label(new Rect(30, 58 + row * 36, 860, 34), text, labelStyle);
         GUI.color = Color.white;
     }
 
