@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 DEFAULT_DATASET = Path("cue_training_dataset.csv")
-DEFAULT_MODEL_PATH = Path("Models") / "cue_model.json"
+DEFAULT_MODEL_PATH = Path("Assets") / "Models" / "cue_model_unity.json"
 DEFAULT_PREDICTIONS_PATH = Path("cue_training_predictions.csv")
 
 CATEGORICAL_COLUMNS = ("conditionLabel", "cueCondition", "materialClass", "targetId")
@@ -118,9 +118,21 @@ class FeatureEncoder:
             "categoricalColumns": list(CATEGORICAL_COLUMNS),
             "booleanColumns": list(BOOLEAN_COLUMNS),
             "numericColumns": list(NUMERIC_COLUMNS),
-            "categories": self.categories,
-            "numericStats": self.numeric_stats,
-            "featureNames": self.feature_names,
+            "categorySets": [
+                {
+                    "column": column,
+                    "categories": self.categories[column],
+                }
+                for column in CATEGORICAL_COLUMNS
+            ],
+            "numericStats": [
+                {
+                    "column": column,
+                    "mean": self.numeric_stats[column]["mean"],
+                    "std": self.numeric_stats[column]["std"],
+                }
+                for column in NUMERIC_COLUMNS
+            ],
         }
 
 
@@ -275,11 +287,30 @@ def save_model(path, encoder, classifier, regressors, metrics, class_counts):
     payload = {
         "modelType": "centroid_classifier_plus_linear_regressors",
         "featureEncoder": encoder.to_dict(),
-        "classifier": classifier,
-        "regressors": regressors,
+        "classifier": [
+            {
+                "label": label,
+                "centroid": centroid,
+            }
+            for label, centroid in sorted(classifier.items())
+        ],
+        "regressors": [
+            {
+                "target": target,
+                "weights": model["weights"],
+                "bias": model["bias"],
+            }
+            for target, model in sorted(regressors.items())
+        ],
         "targetClassColumn": TARGET_CLASS_COLUMN,
         "targetRegressionColumns": list(TARGET_REGRESSION_COLUMNS),
-        "classCounts": dict(class_counts),
+        "classCounts": [
+            {
+                "label": label,
+                "count": count,
+            }
+            for label, count in sorted(class_counts.items())
+        ],
         "metrics": metrics,
     }
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")

@@ -254,7 +254,7 @@ The script prints per-target row counts, state counts, first detection times, `o
 Build the first compact cue-control training dataset with:
 
 ```powershell
-python Tools/build_cue_training_dataset.py
+python Tools/build_cue_training_dataset.py --output Logs/cue_training_dataset.csv
 ```
 
 This writes:
@@ -266,6 +266,14 @@ cue_training_dataset.csv
 The first model should predict `cueType`, `presenceScore`, `volumeGain`, `cueLowPassHz`, `cueReverbAmount`, and `cueOcclusionGain` from target state, distance, speed, and local position columns.
 
 Use `cueCondition` to separate fixed, state-based, and environment-adaptive cue rows during baseline training and evaluation.
+
+Train the lightweight Unity-readable cue model with:
+
+```powershell
+python Tools/train_cue_model.py --dataset Logs/cue_training_dataset.csv --model Assets/Models/cue_model_unity.json --predictions Logs/cue_training_predictions.csv
+```
+
+The generated model is consumed by `PeripheralCueModel` when `comparisonCondition` is set to `LearnedCue` and `learnedModelJson` points to `Assets/Models/cue_model_unity.json`.
 
 ## Cue Candidate Effectiveness
 
