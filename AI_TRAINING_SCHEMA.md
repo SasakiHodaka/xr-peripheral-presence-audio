@@ -230,6 +230,12 @@ To export a combined training CSV from all source logs:
 python Tools/analyze_peripheral_csv.py --batch-label-dataset --objective-only
 ```
 
+To run batch labeling and training in one step:
+
+```powershell
+python Tools/train_from_evaluation_logs.py
+```
+
 It trains a lightweight cue-control model from `cue_training_dataset.csv` and writes:
 
 - `Assets/Models/cue_model_unity.json`
