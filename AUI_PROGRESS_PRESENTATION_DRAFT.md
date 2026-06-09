@@ -1,212 +1,218 @@
 # AUI Progress Presentation Draft
 
-## Slide 1: 研究全体の位置づけ
+## Slide 1: 研究の目的
 
-### Slide text
-
-```text
-新時代インターフェースに向けたAUI学習
-
-目的:
-人間・環境・エージェントの状態を理解し、
-状況に応じて提示方法を変える適応的インターフェースを作る。
-```
-
-### Talk script
-
-私の研究全体の方向性は、新時代のインターフェースを作ることです。  
-その中でも今回は、XR空間で周辺にいる人物の状態を検出し、AUIがどのようなcueを提示すべきかを学習する初期パイプラインを実装しました。
-
-ここでのAUIは、固定的なUIではなく、状況に応じて音響cueや提示強度を変える適応的ユーザインターフェースとして扱っています。
-
-## Slide 2: 今回実装した学習パイプライン
-
-### Slide text
+### Slide Text
 
 ```text
-Unityログ
--> AUI学習データセット
--> cue-controlモデル学習
--> 評価・モデル保存
+XR空間における周辺・視野外の他者の存在を，
+状況に応じた空間音響cueによって自然に提示する．
+
+入力:
+距離，方向，接近速度，発話状態，横切り状態，視野状態
+
+出力:
+cueType，presenceScore，volumeGain
 ```
+
+### Talk Script
+
+本研究では，XR空間で利用者が視野外や周辺にいる他者を見落とす問題に対して，視覚UIではなく空間音響cueで存在を伝える方法を検討している．
+
+## Slide 2: 現在の実装
+
+### Slide Text
 
 ```text
-Input:
-target state, distance, angle, speed, local position
+Unity prototype
 
-Output:
-cueType, presenceScore, volumeGain,
-lowPass, reverb, occlusion
+PeripheralStateDetector
+-> PeripheralCueModel / LearnedCue
+-> PeripheralCueAudioEmitter
+-> CSV logging
 ```
 
-### Talk script
+Implemented:
 
-今回はUnityで取得した周辺人物検出ログを、AUI学習用のデータセットに変換しました。  
-入力は、対象人物の状態、距離、角度、接近速度、ユーザ基準の位置です。  
-出力は、AUIが提示すべきcue種別と、音量やフィルタ、残響、遮蔽に関する制御パラメータです。
+- 状態検出
+- cue出力
+- 3D音響再生
+- CSVログ
+- 学習用データセット生成
+- 初期モデル学習
 
-これにより、ルールベースで設計したcue制御を、まずは学習モデルとして再現できる状態にしました。
+### Talk Script
 
-## Slide 3: データセット
+現在は，Unity上で他者の状態を検出し，cueTypeやpresenceScoreを出力し，その結果をCSVに記録するシステムを実装している．また，CSVログから学習データを作成し，初期の学習モデルをUnityに戻す流れも実装している．
 
-### Slide text
+## Slide 3: 現在のデータの限界
+
+### Slide Text
 
 ```text
-Source CSV files: 18
-Samples: 17,562
+Current dataset:
+rule-based / developer-selected prototype labels
+
+Problem:
+利用者にとって本当に良いcueかは未検証
 ```
+
+Example:
 
 ```text
-cueType distribution:
-Footstep: 12,946
-Voice: 2,264
-None: 2,104
-AmbientPresence: 248
+後方から接近
+-> 足音が正解か？
+-> 気配音が正解か？
+-> 呼吸音が正解か？
 ```
 
-### Talk script
+### Talk Script
 
-既存のUnityログ18本から、17,562サンプルの学習データセットを作成しました。  
-cueTypeの内訳は、Footstepが最も多く、次にVoice、None、AmbientPresenceとなっています。
+現在のデータは，研究者自身が良いと判断したcueやルールベース出力をもとに作成している．そのため，学習パイプラインの確認には使えるが，利用者にとって妥当な音であることを示す根拠としては不十分である．
 
-既存ログには古い形式のものが含まれていたため、現在のrule-based cue policyを使って教師ラベルを補完しています。  
-そのため、これは最終データセットではなく、AUI学習パイプラインを立ち上げるための初期データセットです。
+## Slide 4: 先行研究からの方針
 
-## Slide 4: 初期モデルと評価結果
+### Slide Text
 
-### Slide text
+References:
+
+- Meta Audio Simulator
+- SoundSpaces
+- SoundSpaces 2.0
+- Neural Acoustic Fields
+- Self-supervised learning
+
+Key idea:
 
 ```text
-Model:
-lightweight cue-control baseline
-
-Train rows: 13,172
-Test rows: 4,390
-
-cueType test accuracy: 0.8091
-presenceScore MAE: 0.3074
-volumeGain MAE: 0.3074
+人間が1件ずつラベルを作るのではなく，
+シミュレータで大量の状況データを生成する．
 ```
 
-### Talk script
-
-初期モデルとして、標準ライブラリだけで動く軽量なcue-control baselineを実装しました。  
-cueTypeは分類問題として扱い、presenceScoreやvolumeGainなどは回帰問題として扱っています。
-
-結果として、テストデータに対するcueTypeのaccuracyは約0.81でした。  
-presenceScoreとvolumeGainのMAEは約0.31です。
-
-現段階では高精度モデルを作ることよりも、Unityログからデータセット化し、学習、評価、モデル保存まで通ることを重視しています。
-
-## Slide 5: 現在の限界
-
-### Slide text
+Important difference:
 
 ```text
-Current limitation:
-old logs do not include enough EnvironmentAdaptiveCue variation
+RIRは物理シミュレーションで正解を作れる．
+気配音の正解は人間の認知に依存する．
 ```
+
+### Talk Script
+
+SoundSpacesなどは，仮想環境から大量のデータを生成し，RIRなどの物理的に導出可能な値を教師信号にしている．本研究でも状況データの大量生成という考え方は使えるが，どの気配音が良いかは物理だけでは決まらないため，評価が必要になる．
+
+## Slide 5: 今後のデータ作成方法
+
+### Slide Text
 
 ```text
-cueLowPassHz: fixed at 22000
-cueReverbAmount: fixed at 0
-cueOcclusionGain: fixed at 1
+1. Unityで状況を大量生成
+2. 各状況に複数のcue候補を提示
+3. 認知性能を評価
+4. 最も有効なcueを教師ラベル化
+5. NNまたは軽量モデルで学習
 ```
 
-### Talk script
+Situation parameters:
 
-現在の限界は、既存ログが古く、cueConditionやEnvironmentAdaptiveCueの変化が十分に含まれていない点です。  
-そのため、low-pass、reverb、occlusionの教師値はほぼ固定になっています。
+- distance
+- direction
+- approach speed
+- speaking
+- crossing
+- view state
 
-したがって、現時点で環境適応を本格的に学習できたというよりは、AUI学習のパイプラインが成立した段階です。  
-次に新しいログを取ることで、環境に応じたcue制御を学習対象にできます。
+Cue candidates:
 
-## Slide 6: 次にやること
+- Footstep
+- Voice
+- AmbientPresence
+- ClothingRustle
+- Breathing
+- None
 
-### Slide text
+### Talk Script
+
+今後は，Unityで距離や方向，接近状態などを組み合わせた状況を大量に作り，各状況に複数の音候補を提示する．その後，評価結果から最も認知支援効果の高い音を教師ラベルとして設定する．
+
+## Slide 6: 評価指標
+
+### Slide Text
+
+Objective:
+
+- localization accuracy
+- reaction time
+- approach recognition
+- miss rate
+
+Subjective:
+
+- clarity
+- naturalness
+- discomfort
+- confidence
+
+Score example:
 
 ```text
-Next:
-collect new logs with cue conditions
+presenceScore =
+  a * localizationScore
+  + b * reactionTimeScore
+  + c * approachRecognitionScore
+  + d * clarityScore
+  - e * discomfortScore
 ```
+
+### Talk Script
+
+評価では，好き嫌いではなく，他者の位置や接近に気づけるかを重視する．位置認知精度や反応時間に加えて，自然さや不快感も測定し，総合的に教師ラベルを作成する．
+
+## Slide 7: 現在の結果の位置づけ
+
+### Slide Text
 
 ```text
-Target scenarios:
-Approach / BackApproach / Crossing / Speaking
+現在確認できたこと:
+Unityログ -> 学習データ -> モデル学習 -> Unity利用
 
-Cue conditions:
-NoCue / FixedCue / StateBasedCue / EnvironmentAdaptiveCue
+まだ確認できていないこと:
+そのcueが利用者にとって最適か
 ```
 
-```text
-EnvironmentAdaptiveCue:
-vary roomScale, materialClass, reverbAmount,
-occlusionStrength, distanceAttenuation, rt60, drr
-```
+### Talk Script
 
-### Talk script
-
-次は、新しいUnityログを収集します。  
-対象シナリオとして、Approach、BackApproach、Crossing、Speakingを使い、cue条件としてNoCue、FixedCue、StateBasedCue、EnvironmentAdaptiveCueを比較します。
-
-特にEnvironmentAdaptiveCueでは、EnvironmentAcousticProfileの値を変化させて、low-pass、reverb、occlusionが変わるデータを作ります。  
-これにより、AUIが環境に応じたcue制御を学習できるようになります。
+現在の成果は，学習パイプラインが動くことを示す初期ベースラインである．今後は，評価済みラベルを作成し，ルールベースモデル，主観ラベルモデル，評価済みラベルモデルを比較する．
 
 ## One-Minute Summary
 
 ```text
-今回は、Unityで取得した周辺人物状態ログからAUI学習用データセットを作成し、
-cueTypeとcue制御パラメータを予測する初期モデルを実装しました。
+現在は，XR空間における周辺・視野外の他者状態を検出し，
+cueTypeやpresenceScoreを出力するUnityシステムと，
+そのログから初期学習モデルを作るパイプラインを実装した．
 
-18本のCSVログから17,562サンプルを作成し、
-初期モデルではcueTypeのテストaccuracyが約0.81になりました。
+ただし，現在の教師データは研究者判断やルールベースに依存しており，
+一般的な利用者にとって妥当な音であることはまだ示せていない．
 
-現時点では古いログを用いたrule-based教師による初期学習なので、
-次はEnvironmentAdaptiveCue条件で新規ログを取り、
-環境適応パラメータを本格的に学習対象にします。
+今後は，SoundSpacesなどのように仮想環境から大量の状況データを生成し，
+各状況に対する複数のcue候補を評価する．
+その結果に基づいて教師ラベルを作成し，
+状況に応じた気配音を推定するモデルを学習する．
 ```
 
 ## Likely Questions And Answers
 
-### Q1. これは本当に学習と言えるのか？
+### Q1. 現在の学習結果は何を示しているのか？
 
-```text
-はい。Unityログから入力特徴量と教師ラベルを作り、
-train/test splitで評価し、モデル保存と予測CSV出力まで実装しています。
-ただし、現段階ではrule-based policyを教師とした初期学習です。
-```
+学習パイプラインが動作することを示している．ただし，教師ラベルが主観・ルールベースであるため，cueの妥当性を示す結果ではない．
 
-### Q2. なぜ精度が0.81なのか？
+### Q2. なぜシミュレータだけで正解ラベルを作れないのか？
 
-```text
-現在は軽量な初期baselineであり、データにもクラス偏りがあります。
-目的は最終精度ではなく、AUI学習パイプラインを成立させることです。
-次に新規ログを増やし、モデルと特徴量を改善します。
-```
+RIRなどの音響応答は物理シミュレーションで導出できるが，足音・気配音・呼吸音のどれが分かりやすいかは人間の認知に依存するためである．
 
-### Q3. reverbやocclusionのMAEが0なのは良い結果なのか？
+### Q3. 今後の正解データはどう作るのか？
 
-```text
-良い結果というより、既存ログではそれらの教師値が固定だからです。
-EnvironmentAdaptiveCueの新規ログを収集すると、これらの値が変化し、
-本格的な環境適応学習の評価が可能になります。
-```
+Unityで生成した状況に複数のcue候補を提示し，位置認知精度，反応時間，自然さ，不快感などを測定する．最も認知支援効果が高いcueを教師ラベルにする．
 
-### Q4. 次に何ができれば研究として進むのか？
+### Q4. NNはどこで使うのか？
 
-```text
-4つのtarget scenarioと4つのcue conditionでログを取り、
-EnvironmentAcousticProfileを変化させたデータを追加します。
-その後、AUIモデルがcueTypeだけでなく環境適応パラメータも
-予測できるかを評価します。
-```
-
-### Q5. 最終的に何につながるのか？
-
-```text
-このAUI学習は、状況に応じて提示方法を変える
-新時代インターフェースの基礎です。
-次の第二プロジェクトではマルチモーダル状況推定へ拡張し、
-最終的には人間中心のマルチモーダルCPSインターフェースへ発展させます。
-```
-
+評価済み教師データを作成した後に，距離，方向，接近速度，発話状態，横切り状態，視野状態からcueType，presenceScore，volumeGainを推定するモデルとして使う．

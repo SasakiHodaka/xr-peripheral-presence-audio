@@ -4,6 +4,8 @@
 
 The first lightweight AUI cue-control learning pipeline is running end to end.
 
+This report describes an initial baseline. The current labels come from existing cue rules and developer-selected cue behavior, so they should be used to verify the training pipeline, not as final evidence that the cues are correct for users.
+
 Pipeline:
 
 ```text
@@ -82,7 +84,9 @@ The current model learns:
 - volume gain regression
 - low-pass / reverb / occlusion output reproduction
 
-The zero MAE for low-pass, reverb, and occlusion means the current generated labels are constant for older logs. These targets will become meaningful after collecting new logs with `EnvironmentAdaptiveCue` and `EnvironmentAcousticProfile` variation.
+The zero MAE for low-pass, reverb, and occlusion means the current generated labels are constant for older logs. These targets will become meaningful only after new data contains real variation.
+
+The larger limitation is label reliability. The current dataset can show that the model can reproduce prototype labels, but it cannot prove that those labels are perceptually appropriate. Final cue labels should be generated from simulated situations and evaluation results.
 
 ## What Can Be Reported
 
@@ -93,17 +97,34 @@ Unity logs were converted into a cue-control training dataset.
 An initial AUI learning pipeline was implemented.
 A lightweight baseline model was trained and evaluated.
 The model currently predicts cue type and basic cue parameters from target state, distance, speed, and local position.
-The next step is to collect new environment-adaptive logs so that reverb, low-pass, and occlusion targets vary.
+The current labels are prototype labels, so the next step is to build evaluation-derived cue labels from generated situations and candidate cue performance.
 ```
 
 ## Next Steps
 
-1. Collect new Unity logs under all cue conditions:
-   - `NoCue`
-   - `FixedCue`
-   - `StateBasedCue`
-   - `EnvironmentAdaptiveCue`
-2. Vary `EnvironmentAcousticProfile` values during `EnvironmentAdaptiveCue` trials.
-3. Rebuild `cue_training_dataset.csv`.
-4. Retrain `Models/cue_model.json`.
-5. Compare the learned model against the rule-based cue policy.
+1. Define the generated situation grid:
+   - distance
+   - direction
+   - view state
+   - approach speed
+   - speaking
+   - crossing
+2. Prepare cue candidates:
+   - `Footstep`
+   - `Voice`
+   - `AmbientPresence`
+   - `ClothingRustle`
+   - `Breathing`
+   - `None`
+3. Record evaluation measures:
+   - localization accuracy
+   - reaction time
+   - approach recognition
+   - clarity
+   - naturalness
+   - discomfort
+4. Convert the best-performing cue into `cueType`, `presenceScore`, and `volumeGain` labels.
+5. Retrain the cue-control model and compare:
+   - rule-based model
+   - developer-label baseline
+   - evaluation-label model

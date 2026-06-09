@@ -1,10 +1,33 @@
 # XR Peripheral Presence Audio Research
 
-Unity prototype and research notes for adaptive peripheral presence audio in VR.
+Unity prototype and research notes for adaptive peripheral presence audio in VR/XR.
 
-The project starts from a practical Unity system that detects off-screen or peripheral people and maps those states to interpretable audio cues. The longer-term research direction is to connect those cues to environment acoustics estimated from audio-visual simulation and learning.
+The project starts from a practical Unity system that detects off-screen or peripheral people and maps those states to interpretable audio cues. The longer-term research direction is to replace subjective cue labels with labels built from simulation and evaluation: generate many virtual human-presence situations, test candidate cues, convert the best-performing cue into a training label, and train a cue-control model from that dataset.
 
-The research is framed as a hybrid human-machine system: human-subject experiments define which cues are perceptually effective, while machine learning generalizes cue selection and cue strength to unknown situations.
+## Current Research Position
+
+The current implementation proves that the Unity logging and cue-control learning pipeline can run. It does not yet prove that the generated cue labels are generally correct for users.
+
+Current status:
+
+- Unity can detect peripheral human-presence states and log cue parameters.
+- A first training dataset can be built from Unity logs.
+- A lightweight cue-control model can predict `cueType`, `presenceScore`, and playback parameters.
+- The current labels are prototype labels based on rules and developer judgment.
+- The next research step is to build evaluation-derived labels from generated situations and candidate cue performance.
+
+Important boundary:
+
+```text
+Current dataset:
+developer/rule-based prototype labels
+
+Target dataset:
+simulation-generated situations
+-> multiple cue candidates
+-> evaluation by localization, reaction time, clarity, naturalness, and discomfort
+-> final cue labels
+```
 
 ## Current Prototype
 
@@ -34,119 +57,128 @@ target state + distance + speed
 Next Unity target:
 
 ```text
-target state + distance + speed + environmentAcousticProfile
--> cueType, presenceScore, volumeGain, reverbAmount, occlusionGain
--> 3D audio cue playback
+target state + distance + speed + evaluated cue-label model
+-> cueType, presenceScore, volumeGain
+-> 3D audio playback + CSV + participant/evaluation logs
 ```
 
 ## Research Structure
 
-The primary method is organized around human-labeled peripheral cue learning.
+The method is organized into three layers.
 
-### 1. Human-Labeled Cue Learning
+### 1. Situation Simulation and Cue-Label Generation
 
-Goal: learn which sound cue best improves recognition of peripheral or off-screen people in VR.
+Goal: generate many virtual situations and convert cue evaluation results into training labels.
 
-Pipeline:
+Core flow:
 
 ```text
-Unity situation generation
--> multiple cue candidates
--> human-subject evaluation
--> best cue labels
--> PresenceScore / volumeGain targets
--> neural cue prediction
--> unknown-situation evaluation
+distance + direction + approach speed + speaking + crossing + view state
+-> candidate cues such as footstep, voice, ambient presence, clothing rustle, breathing, or none
+-> evaluation by localization accuracy, reaction time, clarity, naturalness, and discomfort
+-> cueType, presenceScore, and volumeGain labels
 ```
 
-Useful ideas:
+This is the main answer to the data-reliability problem. The current dataset is useful as an initial subjective prototype, but it should not be treated as the final ground truth. Final cue labels should come from simulation plus evaluation, not only from the developer's preference.
 
-- Generate controlled conditions such as approach, rear approach, crossing, speaking, and no target.
-- Present multiple cue candidates for each situation.
-- Measure reaction time, detection success, direction accuracy, naturalness, annoyance, and immersion.
-- Use the best-performing cue as the supervised `cueType` label.
-- Train a model to predict `cueType`, `presenceScore`, and `volumeGain`.
+### 2. Audio-Visual Simulation and Acoustic References
 
-The longer-term method also keeps three extension layers.
-
-### 2. Environment Acoustics Estimation
-
-Goal: infer an `environmentAcousticProfile` that captures room-scale acoustic properties.
+Goal: use simulation-based audio research as the data-generation model, while keeping the target label problem clear.
 
 Main references:
 
-- Few-Shot Audio-Visual Learning of Environment Acoustics
-- Learning Neural Acoustic Fields, as a reference concept for source-receiver acoustic prediction
-
-Useful ideas:
-
-- Use RGB-D, echo, pose, and source/listener position.
-- Predict RIR, RT60, DRR, occlusion, and compact acoustic profile values.
-- Treat NAF-style acoustic fields as a later-stage concept, not the first implementation target.
-
-### 3. Audio-Visual Learning
-
-Goal: generate and learn from large unlabeled audio-visual datasets.
-
-Main references:
-
+- Meta Audio Simulator
 - SoundSpaces
 - SoundSpaces 2.0
-- SoundSpaces: Audio-Visual Navigation in 3D Environments
+- Learning Neural Acoustic Fields
+- self-supervised learning
 
 Useful ideas:
 
-- Randomly place sources and listeners in 3D spaces.
-- Render dry and wet audio pairs.
-- Store RGB-D, pose, source/listener positions, RIR, room size, material, distance, and occlusion.
-- Pre-train audio, vision, and position encoders with self-supervised objectives.
+- Generate many samples from virtual environments instead of manually labeling every sample.
+- Randomly place sources, listeners, and moving targets in 3D spaces.
+- Save state parameters, audio candidates, source/listener positions, and environment metadata.
+- Use self-supervised or simulation-supervised learning where the label is physically computable.
 
-### 4. Unity Implementation Connection
+Important boundary:
 
-Goal: use the estimated acoustic profile to control peripheral audio cues in VR.
+```text
+SoundSpaces-style work can use simulated RIR as the ground truth because acoustics are physically computable.
+This project cannot get the correct cueType from physics alone because cue usefulness depends on human perception.
+Therefore, cue labels require human evaluation or an explicit evaluation model.
+```
+
+### 3. Unity Implementation Connection
+
+Goal: use the learned or rule-based cue-control output in a real-time XR prototype.
 
 Unity-side flow:
 
 ```text
 PeripheralStateDetector
--> PeripheralCueModel
+-> PeripheralCueModel or learned cue-control model
 -> PeripheralCueAudioEmitter
 -> CSV/debug/evaluation
 ```
 
-Audio2Face is treated as an optional extension for the `Speaking` condition, where voice, lip motion, facial expression, and presence cues may be synchronized. It is not the main environment acoustics method.
+Environment acoustics estimation remains a later extension. A compact `EnvironmentAcousticProfile` can condition cue playback after the cue-label dataset and evaluation pipeline are stable.
+
+Audio2Face is treated as an optional extension for the `Speaking` condition, where voice, lip motion, facial expression, and presence cues may be synchronized. It is not the main cue-label generation method.
+
+## Planned Data and Learning Pipeline
+
+```text
+1. Generate many Unity situations:
+   distance, direction, approach speed, speaking, crossing, and view state.
+2. Prepare several cue candidates for each situation:
+   footstep, voice, ambient presence, clothing rustle, breathing, and none.
+3. Evaluate cue candidates:
+   localization accuracy, detection/reaction time, approach recognition, clarity, naturalness, and discomfort.
+4. Build final labels:
+   best cueType, presenceScore, and volumeGain.
+5. Train a neural or tabular cue-control model:
+   state parameters -> cueType + presenceScore + volumeGain.
+6. Test on unseen situations and in Unity play-mode trials.
+```
 
 ## Development Roadmap
 
-1. Add cue-candidate trial support.
-2. Add `PeripheralCueAudioEmitter` to play candidate cue types as 3D audio.
-3. Extend logs with cue candidate, response, reaction time, rating, and playback parameters.
-4. Run human-subject experiments to select best cue labels per situation.
-5. Build `PresenceScore` and `volumeGain` targets from the experiment results.
-6. Train a cue prediction model for `cueType`, `presenceScore`, and `volumeGain`.
-7. Evaluate the model on unknown situations and held-out participants.
-8. Add a manual `EnvironmentAcousticProfile` for early environment-adaptive cue tests.
-9. Add comparison conditions: `NoCue`, `FixedCue`, `StateBasedCue`, `LearnedCue`, and `EnvironmentAdaptiveCue`.
-10. Build the simulation data schema for dry/wet audio, source/listener pose, RGB-D, RIR, and room metadata.
-11. Pre-train audio-visual-position encoders with self-supervised tasks.
-12. Fine-tune an environment estimator that outputs `environmentAcousticProfile`.
-13. Connect the estimator output back into Unity cue control.
-14. Evaluate both model accuracy and VR experience.
+1. Stabilize the current state detection and cue prediction layer.
+2. Stabilize `PeripheralCueAudioEmitter` clip mapping and playback timing in trial scenes.
+3. Define the simulation condition grid for distance, direction, approach speed, speaking, crossing, and view state.
+4. Add candidate cue playback for footstep, voice, ambient presence, clothing rustle, breathing, and none.
+5. Collect the first subjective prototype dataset and clearly mark it as non-final.
+6. Run evaluation trials to measure localization accuracy, reaction time, clarity, naturalness, and discomfort.
+7. Convert evaluation results into cue labels and presence/volume scores.
+8. Train a cue-control model from the evaluated dataset.
+9. Compare rule-based, subjective-label, and evaluation-label models.
+10. Add environment-acoustic conditioning after the cue-label pipeline is reliable.
 
 ## Documentation
 
+Primary research documents:
+
+- `RESEARCH_DESIGN.md`: research question, hypotheses, experiment design, measures, and the cue-label training plan.
+- `RESEARCH_ROADMAP.md`: implementation roadmap from situation simulation to evaluation-derived labels and cue-control learning.
+- `AI_TRAINING_SCHEMA.md`: feature columns, target columns, current prototype dataset, label reliability issue, and next dataset target.
+- `CURRENT_PROGRESS_REPORT.md`: current Japanese summary of the project status, limitation, and next plan.
+
+Implementation documents:
+
 - `PERIPHERAL_RESEARCH.md`: Unity demo flow, CSV format, trial conditions, and analysis script usage.
-- `HUMAN_LABELING_PIPELINE.md`: main human-subject cue labeling and model-training pipeline.
-- `RESEARCH_DESIGN.md`: research question, hypotheses, experimental conditions, metrics, and study plan.
+- `ENVIRONMENT.md`: local Unity and tooling setup.
+
+Related work and extension documents:
+
+- `LITERATURE_PRIORITIES.md`: prioritized related work across acoustics, SoundSpaces, XR, HRI, CPS, and multimodal learning.
+- `NAF_RESEARCH_PLAN.md`: NAF-inspired interpretation and boundaries for this project.
 - `SECOND_PROJECT_RESEARCH_DESIGN.md`: follow-on project design that bridges XR adaptive feedback to multimodal CPS.
+
+Progress/archive documents:
+
 - `AUI_TRAINING_REPORT.md`: latest cue-control learning pipeline result and next training steps.
 - `PROGRESS_REPORT_AUI.md`: concise progress-report text for the current AUI learning implementation.
-- `AUI_PROGRESS_PRESENTATION_DRAFT.md`: slide-by-slide draft and Q&A for the next progress report.
-- `CURRENT_PROGRESS_REPORT.md`: integrated current progress report across research design, Unity implementation, and AUI learning.
-- `NAF_RESEARCH_PLAN.md`: NAF-inspired interpretation and boundaries for this project.
-- `RESEARCH_ROADMAP.md`: consolidated research plan and mapping to related work.
-- `LITERATURE_PRIORITIES.md`: prioritized related work across acoustics, SoundSpaces, XR, HRI, CPS, and multimodal learning.
-- `ENVIRONMENT.md`: local Unity and tooling setup.
+- `AUI_PROGRESS_PRESENTATION_DRAFT.md`: slide-by-slide draft and Q&A for progress reporting.
 
 ## References
 
@@ -161,5 +193,5 @@ Audio2Face is treated as an optional extension for the `Speaking` condition, whe
 Use Unity batch mode as the authoritative compile check:
 
 ```powershell
-& "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\acd-pc67\My project" -logFile "C:\Users\acd-pc67\My project\Logs\PeripheralCompileCheck.log"
+& "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\acd-pc67\xr-peripheral-presence-audio" -logFile "C:\Users\acd-pc67\xr-peripheral-presence-audio\Logs\PeripheralCompileCheck.log"
 ```

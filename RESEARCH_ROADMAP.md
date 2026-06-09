@@ -2,170 +2,152 @@
 
 ## Fixed Direction
 
-This project should use human-labeled peripheral cue learning as the primary research pipeline:
+This project should be developed as a three-layer system:
 
 ```text
-Unity situation generation
--> multiple peripheral cue candidates
--> human-subject evaluation
--> best cue label per situation
--> mathematical PresenceScore / volumeGain targets
--> neural model training
--> unknown-situation evaluation
+situation simulation
+-> simulation-based cue-label generation
+-> optional human feedback calibration
+-> Unity peripheral cue-control learning
 ```
 
-The immediate implementation target is not a full neural acoustic field or a physically complete acoustic simulator. The first target is an explainable Unity experiment system that can present multiple peripheral presence cues, measure human recognition performance, convert the best cue into labels, and train a model to predict cue type and cue strength for unknown situations.
+The immediate implementation target is not a full neural acoustic field and not only an environment acoustics estimator. The first target is a defensible cue-label pipeline: generate virtual human-presence situations, derive cue labels from objective simulation parameters and evaluation metrics, and use the result as training data.
 
-Environment acoustics estimation remains a later extension:
-
-```text
-human-labeled cue learning
--> environment-adaptive cue parameters
--> audio-visual / acoustic simulation support
-```
-
-The research should be presented as a hybrid human-machine approach:
-
-```text
-human perception experiment
--> cue labels and perceptual targets
--> machine learning for prediction and generalization
--> simulation-based environment estimation for acoustic adaptation
-```
-
-Human participants provide the perceptual ground truth. The model provides scalable prediction for situations that were not directly tested.
-
-## Primary Human-Labeled Cue Learning Pipeline
-
-The core experiment flow is:
-
-1. Generate peripheral-person situation patterns in Unity.
-2. Present multiple cue candidates for each situation.
-3. Measure recognition performance in a human-subject experiment.
-4. Select the most effective cue as the target label.
-5. Define `PresenceScore` and `volumeGain` with a mathematical model.
-6. Train a neural model using the labeled dataset.
-7. Evaluate prediction performance on unknown situations.
-
-Recommended initial cue candidates:
-
-- `NoCue`
-- `Footstep`
-- `Breathing`
-- `ClothRustle`
-- `Voice`
-- `AmbientPresence`
-- `MixedCue`
-
-Recommended objective metrics:
-
-- detection success
-- reaction time
-- direction judgment accuracy
-- missed detections
-- false responses
-
-Recommended subjective metrics:
-
-- awareness
-- naturalness
-- annoyance
-- discomfort
-- immersion
-
-Label generation should use a combined effectiveness score instead of reaction time alone:
-
-```text
-cueEffectiveness =
-  detectionSuccess
-  + directionAccuracy
-  - normalizedReactionTime
-  + awarenessRating
-  + naturalnessRating
-  - annoyanceRating
-  - discomfortRating
-```
+Do not use the researcher's subjective cue decisions as final ground truth. Existing hand-written cue rules are only a prototype baseline for checking the Unity pipeline.
 
 The concrete study design is defined in `RESEARCH_DESIGN.md`. Implementation work should support that document's research question, cue conditions, target scenarios, and dependent measures before expanding the AI scope.
 
 The follow-on project is defined in `SECOND_PROJECT_RESEARCH_DESIGN.md`. It should validate multimodal situation inference and adaptive feedback before expanding into full multimodal CPS.
 
-## Layer 1: Environment Acoustics Estimation
+## Layer 1: Situation Simulation
 
 Goal:
+
+```text
+distance + direction + approach speed + speaking + crossing + view state
+-> many virtual human-presence situations
+-> candidate cue playback and logging
+```
+
+Why it matters:
+
+- It replaces ad hoc manual examples with a controlled condition space.
+- It makes the input parameters explicit.
+- It allows systematic coverage of behind-user approach, crossing, speaking, and no-target cases.
+- It separates situation generation from the later question of which cue should be treated as correct.
+
+Initial condition factors:
+
+- distance: near, middle, far
+- direction: front, rear, left, right
+- approach speed: none, slow, fast
+- speaking: false, true
+- crossing: false, true
+- view state: in view, peripheral, out of view
+
+## Layer 2: Cue Evaluation and Label Generation
+
+Goal:
+
+```text
+generated situation
+-> objective simulation score
+-> optional human feedback score
+-> cueType, presenceScore, volumeGain labels
+```
+
+Why it matters:
+
+- The correct cue should not be derived from the developer's preference.
+- The first training labels should be generated from reproducible simulation parameters such as distance, direction, relative speed, view state, speaking state, and crossing state.
+- Human feedback should be used later for calibration and validation, not as the only source of labels.
+
+Use in this project:
+
+- Generate many situations automatically in Unity.
+- Compute baseline labels from objective situation metrics.
+- Train a cue-control model from the generated dataset.
+- Evaluate the learned model against held-out simulation scenarios.
+- Add human feedback after the simulation pipeline works to calibrate clarity, naturalness, discomfort, and annoyance.
+
+Initial objective label model:
+
+```text
+presenceScore =
+  a * distanceUrgency
+  + b * outOfViewNeed
+  + c * approachUrgency
+  + d * speakingImportance
+  + e * crossingNeed
+  + f * gazeRelevance
+```
+
+The weights should first be defined as a transparent baseline from objective situation factors and later calibrated from user feedback.
+
+Human feedback calibration model:
+
+```text
+calibratedScore =
+  objectiveScore
+  + g * clarityRating
+  + h * naturalnessRating
+  - i * discomfortRating
+  - j * annoyanceRating
+```
+
+This preserves a non-subjective simulation-first baseline while allowing the system to become closer to human perception.
+
+## Layer 3: Cue-Control Learning
+
+Goal:
+
+```text
+situation parameters
+-> cueType + presenceScore + volumeGain
+-> Unity playback
+```
+
+Initial models:
+
+- RandomForest or Gradient Boosting for explainable tabular baselines.
+- Small MLP after the dataset and labels stabilize.
+- Multi-output model with cue classification and score regression.
+
+Evaluation:
+
+- cueType accuracy and F1-score against evaluated labels
+- presenceScore MAE/RMSE
+- volumeGain MAE/RMSE
+- real-time Unity playback behavior
+- final user-study measures: detection time, localization accuracy, naturalness, immersion, discomfort
+
+## Simulation-Based Learning References
+
+Most relevant references for the data-generation idea:
+
+- Meta Audio Simulator
+- SoundSpaces
+- SoundSpaces 2.0
+- self-supervised learning
+
+Use in this project:
+
+- These works support the idea of generating large datasets from virtual scenes.
+- In SoundSpaces-style work, the label can be an RIR because acoustic propagation is physically simulated.
+- In this project, the label is a cue choice for human awareness, so evaluation is required.
+
+Environment acoustics remains a later extension:
 
 ```text
 RGB-D + echo + pose + source/listener position
 -> RIR / RT60 / DRR / occlusion / material / room scale
 -> environmentAcousticProfile
+-> cue playback conditioning
 ```
 
-Most relevant reference:
+Neural Acoustic Fields are out of scope for the current implementation plan.
 
-- Few-Shot Audio-Visual Learning of Environment Acoustics
-
-Why it matters:
-
-- It directly matches the idea of estimating environment acoustics from limited observations.
-- It uses RGB-D, echo, and pose information.
-- It predicts RIR for arbitrary source-receiver pairs.
-- It supports the few-shot unknown-environment framing.
-
-Use in this project:
-
-- Treat `environmentAcousticProfile` as the Unity-facing output.
-- Keep the profile compact and controllable first:
-  - `roomScale`
-  - `materialClass`
-  - `reverbAmount`
-  - `occlusionStrength`
-  - `distanceAttenuation`
-  - `rt60`
-  - `drr`
-
-NAF-related work is useful as a reference concept for source/listener acoustic fields, but it is not the selected first AI method. The first AI method should follow Few-Shot Audio-Visual Learning of Environment Acoustics, with SoundSpaces 2.0 used to generate the required audio-visual training data.
-
-## Layer 2: Audio-Visual Learning
-
-Goal:
-
-```text
-3D scenes + random source/listener pairs
--> dry audio + wet audio + RGB-D + pose + RIR + metadata
--> self-supervised pre-training
-```
-
-Most relevant references:
-
-- SoundSpaces
-- SoundSpaces 2.0
-- SoundSpaces: Audio-Visual Navigation in 3D Environments
-
-Use in this project:
-
-- Generate many unlabeled samples.
-- Randomize source and listener locations.
-- Save dry audio and rendered wet audio.
-- Save RGB-D if available.
-- Save room size, material, distance, occlusion, and source/listener pose.
-
-Candidate self-supervised tasks:
-
-- Predict wet audio from dry audio and source/listener pose.
-- Predict RIR from RGB-D, pose, and source/listener position.
-- Predict RT60 or DRR from audio-visual observations.
-- Align visual embeddings and acoustic embeddings from the same environment.
-- Learn common environment embeddings from different source/listener observations.
-
-Candidate model structure:
-
-- Audio encoder: Audio Spectrogram Transformer or CNN/ResNet.
-- Visual encoder: CNN, ViT, or RGB-D encoder.
-- Position encoder: sinusoidal positional encoding.
-- Fusion: Transformer encoder.
-- Outputs: RIR, RT60, DRR, wet spectrogram, or acoustic embedding.
-
-## Layer 3: Unity Implementation Connection
+## Unity Implementation Connection
 
 Current Unity cue flow:
 
@@ -177,8 +159,8 @@ state + distance + speed
 Target Unity cue flow:
 
 ```text
-state + distance + speed + environmentAcousticProfile
--> cueType, presenceScore, volumeGain, reverbAmount, occlusionGain
+state + distance + speed + evaluated cue-label model
+-> cueType, presenceScore, volumeGain
 ```
 
 Current implemented components:
@@ -196,12 +178,16 @@ Next components:
 - `EnvironmentAcousticProfile`
 - playback-aware logger fields
 - cue comparison condition controller
+- simulation condition generator
+- participant response logger
+- evaluation-to-label dataset builder
 
 ## Related Work Mapping
 
 | Project element | Main reference |
 | --- | --- |
-| Large-scale simulation data generation | SoundSpaces / SoundSpaces 2.0 |
+| Large-scale simulation data generation | Meta Audio Simulator / SoundSpaces / SoundSpaces 2.0 |
+| Human-aware cue label generation | This project's evaluation pipeline |
 | RGB-D, echo, pose based acoustic estimation | Few-Shot Audio-Visual Learning of Environment Acoustics |
 | Source-receiver RIR prediction | Few-Shot RIR / NAF |
 | Audio-visual spatial understanding | SoundSpaces audio-visual navigation |
@@ -237,9 +223,6 @@ It should be treated as an optional later extension for the `Speaking` condition
 
 ### Conceptual References
 
-- Andrew Luo, Yilun Du, Michael J. Tarr, Joshua B. Tenenbaum, Antonio Torralba, Vincent Sitzmann. **Learning Neural Acoustic Fields**. NeurIPS 2022.  
-  https://arxiv.org/abs/2204.00628
-
 - NVIDIA. **Omniverse Audio2Face Documentation**.  
   https://docs.omniverse.nvidia.com/audio2face/latest/overview_external.html
 
@@ -250,33 +233,31 @@ It should be treated as an optional later extension for the `Speaking` condition
 Use:
 
 ```text
-SoundSpaces 2.0 dataset generation
--> Few-Shot-style environment acoustics estimator
--> compact EnvironmentAcousticProfile
+Unity situation generation
+-> cue candidate evaluation
+-> evaluated cue-label dataset
+-> cue-control model
 -> Unity cue control
 ```
 
-Do not start with NAF. Do not train a full neural acoustic field until the compact estimator has been validated.
+Do not start with NAF. Do not treat the current subjective cue labels as final ground truth. Use them only as an initial prototype baseline until evaluation-based labels exist.
 
-### Step 1: Add cue-candidate experiment trials
+### Step 0.5: Lock the simulation-first learning pipeline
 
-Implement:
-
-- cue-candidate trial selection
-- `cueCandidate` metadata
-- response and reaction-time logging
-- subjective rating logging
-
-Target flow:
+Target pipeline:
 
 ```text
-BackApproach situation
--> Footstep / Breathing / ClothRustle / Voice / AmbientPresence candidates
--> participant response
--> CSV log
+Unity automatic scenario generator
+-> objective label generation
+-> CSV dataset
+-> Python model training
+-> Unity learned cue playback
+-> human feedback calibration and evaluation
 ```
 
-### Step 2: Finish the Unity cue playback layer
+The first implementation should prioritize reproducible generated datasets over manual demonstrations.
+
+### Step 1: Finish the Unity cue layer
 
 Implement:
 
@@ -295,39 +276,7 @@ person approaches from behind
 -> CSV log
 ```
 
-### Step 3: Generate human labels
-
-Implement:
-
-- per-condition aggregation
-- cue effectiveness scoring
-- best-cue label selection
-- labeled dataset export
-
-Targets:
-
-- `cueType`
-- `presenceScore`
-- `volumeGain`
-
-### Step 4: Train the cue prediction model
-
-Start with:
-
-- rule-based baseline
-- logistic regression or random forest baseline
-- small MLP
-
-Evaluate:
-
-- cue type accuracy
-- macro F1
-- `PresenceScore` MAE
-- `volumeGain` MAE
-- held-out situation performance
-- held-out participant performance
-
-### Step 5: Add manual environment adaptation
+### Step 2: Add manual environment adaptation
 
 Implement:
 
@@ -338,14 +287,13 @@ Implement:
 
 This allows testing the environment-adaptive structure before training a model.
 
-### Step 6: Add experimental comparison conditions
+### Step 3: Add experimental comparison conditions
 
 Conditions:
 
 - `NoCue`
 - `FixedCue`
 - `StateBasedCue`
-- `LearnedCue`
 - `EnvironmentAdaptiveCue`
 
 Purpose:
@@ -357,71 +305,76 @@ Current Unity status:
 - `PeripheralCueModel.comparisonCondition` switches these cue-control modes.
 - `cueCondition` is written to CSV and included in the first cue-training dataset.
 
-### Step 7: Define simulation dataset schema
+### Step 4: Define cue-label simulation dataset schema
 
 Save each generated sample with:
 
 - `sample_id`
-- `dry_audio_path`
-- `wet_audio_path`
-- `source_position`
-- `listener_position`
-- `listener_rotation`
-- `rgb_image_path`
-- `depth_image_path`
-- `room_size`
-- `material_type`
 - `distance`
-- `occlusion`
-- `rir_path`
-- `rt60`
-- `drr`
+- `direction`
+- `view_state`
+- `approach_speed`
+- `speaking`
+- `crossing`
+- `candidate_cue`
+- `candidate_volume`
+- `localization_accuracy`
+- `reaction_time`
+- `approach_recognition`
+- `clarity_rating`
+- `naturalness_rating`
+- `discomfort_rating`
+- `selected_cue_label`
+- `presence_score`
+- `volume_gain`
 
-### Step 8: Train self-supervised encoders
+### Step 5: Run cue evaluation and create labels
 
-Start with small data and simple tasks:
+For each generated situation:
 
-- wet spectrogram prediction
-- RT60 / DRR regression
-- environment embedding alignment
+- play multiple cue candidates
+- measure objective and subjective responses
+- select the best-performing cue
+- compute `presenceScore` and `volumeGain`
 
-Then scale toward RIR prediction.
+### Step 6: Train the cue-control model
 
-### Step 9: Fine-tune environment estimator
+Inputs:
 
-Labels:
+- distance
+- direction
+- view state
+- approach speed
+- speaking
+- crossing
 
-- wide / narrow
-- strong / weak reverberation
-- wood / concrete / glass / carpet
-- open / closed
-- occluded / not occluded
+Outputs:
 
-Output:
+- `cueType`
+- `presenceScore`
+- `volumeGain`
 
-```text
-environmentAcousticProfile
-```
+Start with tabular baselines, then move to a small MLP or NN once the dataset is reliable.
 
-### Step 10: Integrate model output into Unity
+### Step 7: Integrate learned cue model into Unity
 
 Bridge:
 
 ```text
-trained estimator
--> environmentAcousticProfile
+trained cue-control model
+-> cueType / presenceScore / volumeGain
 -> PeripheralCueModel
 -> PeripheralCueAudioEmitter
 ```
 
-### Step 11: Evaluate
+### Step 8: Evaluate
 
 Model evaluation:
 
-- RIR error
-- RT60 error
-- DRR error
-- environment classification accuracy
+- cueType accuracy / F1-score
+- presenceScore error
+- volumeGain error
+- generalization to unseen generated situations
 
 VR experience evaluation:
 

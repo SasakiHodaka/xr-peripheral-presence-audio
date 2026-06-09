@@ -302,8 +302,10 @@ public class PeripheralCueLearnedModel
     {
         PeripheralCuePrediction prediction = new PeripheralCuePrediction();
         prediction.cueType = PeripheralCueType.None;
+        prediction.directionLabel = PeripheralDirectionLabel.Front;
         prediction.lowPassHz = 22000f;
         prediction.occlusionGain = 1f;
+        prediction.reason = "LearnedNoCue";
         return prediction;
     }
 }

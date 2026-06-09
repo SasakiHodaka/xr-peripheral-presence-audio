@@ -14,19 +14,33 @@ public enum PeripheralCueComparisonCondition
     NoCue,
     FixedCue,
     StateBasedCue,
-    LearnedCue,
-    EnvironmentAdaptiveCue
+    EnvironmentAdaptiveCue,
+    LearnedCue
+}
+
+public enum PeripheralDirectionLabel
+{
+    Front,
+    Back,
+    Left,
+    Right,
+    FrontLeft,
+    FrontRight,
+    BackLeft,
+    BackRight
 }
 
 [Serializable]
 public struct PeripheralCuePrediction
 {
     public PeripheralCueType cueType;
+    public PeripheralDirectionLabel directionLabel;
     public float presenceScore;
     public float volumeGain;
     public float lowPassHz;
     public float reverbAmount;
     public float occlusionGain;
+    public string reason;
 }
 
 public class PeripheralCueModel : MonoBehaviour
@@ -70,6 +84,7 @@ public class PeripheralCueModel : MonoBehaviour
 
         float nearFactor = 1f - Mathf.InverseLerp(nearDistance, farDistance, result.distance);
         float score = Mathf.Clamp01(nearFactor);
+        float distanceContribution = score;
 
         if (outOfView) score += outOfViewBoost;
         if (approaching) score += approachingBoost;
@@ -88,6 +103,8 @@ public class PeripheralCueModel : MonoBehaviour
 
         PeripheralCuePrediction prediction = new PeripheralCuePrediction();
         prediction.cueType = SelectCueType(speaking, approaching, crossing, outOfView, near, score);
+        prediction.directionLabel = SelectDirectionLabel(result.userLocalPosition);
+        prediction.reason = BuildReason(outOfView, approaching, speaking, crossing, near, distanceContribution, prediction.directionLabel);
         prediction.presenceScore = prediction.cueType == PeripheralCueType.None ? 0f : score;
 
         if (comparisonCondition == PeripheralCueComparisonCondition.FixedCue)
@@ -121,43 +138,6 @@ public class PeripheralCueModel : MonoBehaviour
         return sample;
     }
 
-    private static PeripheralCuePrediction EmptyPrediction()
-    {
-        PeripheralCuePrediction prediction = new PeripheralCuePrediction();
-        prediction.cueType = PeripheralCueType.None;
-        prediction.lowPassHz = 22000f;
-        prediction.occlusionGain = 1f;
-        return prediction;
-    }
-
-    private static PeripheralCueType SelectCueType(
-        bool speaking,
-        bool approaching,
-        bool crossing,
-        bool outOfView,
-        bool near,
-        float score)
-    {
-        if (score <= 0.05f)
-            return PeripheralCueType.None;
-
-        if (speaking)
-            return PeripheralCueType.Voice;
-
-        if (approaching || crossing)
-            return PeripheralCueType.Footstep;
-
-        if (outOfView || near)
-            return PeripheralCueType.AmbientPresence;
-
-        return PeripheralCueType.None;
-    }
-
-    private static bool HasState(PeripheralState value, PeripheralState state)
-    {
-        return (value & state) != 0;
-    }
-
     private bool TryPredictLearned(
         PeripheralDetectionResult result,
         bool outOfView,
@@ -167,21 +147,22 @@ public class PeripheralCueModel : MonoBehaviour
         bool near,
         out PeripheralCuePrediction prediction)
     {
-        prediction = new PeripheralCuePrediction();
+        prediction = EmptyPrediction();
         if (!EnsureLearnedModelLoaded())
             return false;
 
+        EnvironmentAcousticProfile profile = environmentProfile;
         PeripheralCueFeatureContext context = new PeripheralCueFeatureContext();
         context.conditionLabel = learnedConditionLabel;
         context.cueCondition = learnedFeatureCueCondition;
-        context.materialClass = environmentProfile != null ? environmentProfile.materialClass.ToString() : AcousticMaterialClass.Neutral.ToString();
+        context.materialClass = profile != null ? profile.materialClass.ToString() : "Neutral";
         context.targetId = result.targetId;
-        context.roomScale = environmentProfile != null ? environmentProfile.roomScale : 1f;
-        context.environmentReverbAmount = environmentProfile != null ? environmentProfile.reverbAmount : 0f;
-        context.environmentOcclusionStrength = environmentProfile != null ? environmentProfile.occlusionStrength : 0f;
-        context.environmentDistanceAttenuation = environmentProfile != null ? environmentProfile.distanceAttenuation : 0f;
-        context.environmentRt60 = environmentProfile != null ? environmentProfile.rt60 : 0f;
-        context.environmentDrr = environmentProfile != null ? environmentProfile.drr : 0f;
+        context.roomScale = profile != null ? profile.roomScale : 1f;
+        context.environmentReverbAmount = profile != null ? profile.reverbAmount : 0f;
+        context.environmentOcclusionStrength = profile != null ? profile.occlusionStrength : 0f;
+        context.environmentDistanceAttenuation = profile != null ? profile.distanceAttenuation : 0f;
+        context.environmentRt60 = profile != null ? profile.rt60 : 0f;
+        context.environmentDrr = profile != null ? profile.drr : 0f;
         context.outOfView = outOfView;
         context.approaching = approaching;
         context.speaking = speaking;
@@ -197,6 +178,9 @@ public class PeripheralCueModel : MonoBehaviour
         context.localZ = result.userLocalPosition.z;
 
         prediction = learnedModel.Predict(context);
+        prediction.directionLabel = SelectDirectionLabel(result.userLocalPosition);
+        if (string.IsNullOrEmpty(prediction.reason))
+            prediction.reason = BuildReason(outOfView, approaching, speaking, crossing, near, 1f - Mathf.InverseLerp(nearDistance, farDistance, result.distance), prediction.directionLabel);
         return true;
     }
 
@@ -220,5 +204,100 @@ public class PeripheralCueModel : MonoBehaviour
             learnedModel = null;
             return false;
         }
+    }
+
+    private static PeripheralCuePrediction EmptyPrediction()
+    {
+        PeripheralCuePrediction prediction = new PeripheralCuePrediction();
+        prediction.cueType = PeripheralCueType.None;
+        prediction.directionLabel = PeripheralDirectionLabel.Front;
+        prediction.lowPassHz = 22000f;
+        prediction.occlusionGain = 1f;
+        prediction.reason = "NoCue";
+        return prediction;
+    }
+
+    private static PeripheralCueType SelectCueType(
+        bool speaking,
+        bool approaching,
+        bool crossing,
+        bool outOfView,
+        bool near,
+        float score)
+    {
+        if (score <= 0.05f)
+            return PeripheralCueType.None;
+
+        if (speaking)
+            return PeripheralCueType.Voice;
+
+        if (approaching)
+            return PeripheralCueType.Footstep;
+
+        if (crossing)
+            return PeripheralCueType.AmbientPresence;
+
+        if (outOfView || near)
+            return PeripheralCueType.AmbientPresence;
+
+        return PeripheralCueType.None;
+    }
+
+    public static PeripheralDirectionLabel SelectDirectionLabel(Vector3 localPosition)
+    {
+        float absX = Mathf.Abs(localPosition.x);
+        float absZ = Mathf.Abs(localPosition.z);
+
+        if (absX < 0.35f && localPosition.z >= 0f)
+            return PeripheralDirectionLabel.Front;
+
+        if (absX < 0.35f && localPosition.z < 0f)
+            return PeripheralDirectionLabel.Back;
+
+        if (absZ < 0.35f)
+            return localPosition.x < 0f ? PeripheralDirectionLabel.Left : PeripheralDirectionLabel.Right;
+
+        if (localPosition.z >= 0f)
+            return localPosition.x < 0f ? PeripheralDirectionLabel.FrontLeft : PeripheralDirectionLabel.FrontRight;
+
+        return localPosition.x < 0f ? PeripheralDirectionLabel.BackLeft : PeripheralDirectionLabel.BackRight;
+    }
+
+    private static string BuildReason(
+        bool outOfView,
+        bool approaching,
+        bool speaking,
+        bool crossing,
+        bool near,
+        float distanceContribution,
+        PeripheralDirectionLabel directionLabel)
+    {
+        if (speaking)
+            return "Speaking_" + directionLabel;
+
+        if (outOfView && approaching)
+            return "OutOfViewApproach_" + directionLabel;
+
+        if (approaching)
+            return "Approach_" + directionLabel;
+
+        if (crossing)
+            return "Crossing_" + directionLabel;
+
+        if (outOfView)
+            return "OutOfViewPresence_" + directionLabel;
+
+        if (near)
+            return "NearPresence_" + directionLabel;
+
+        if (distanceContribution > 0.05f)
+            return "DistancePresence_" + directionLabel;
+
+        return "NoRelevantState";
+    }
+
+    private static bool HasState(PeripheralState value, PeripheralState state)
+    {
+        return (value & state) != 0;
     }
 }

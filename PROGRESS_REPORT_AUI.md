@@ -1,82 +1,60 @@
 # Progress Report: AUI Learning Implementation
 
-## Report Summary
+## Summary
 
-次回進捗報告では、以下のように報告できる。
+Unityログからcue-control用の学習データを作成し，初期の軽量モデルを学習・評価するパイプラインを実装した．
+
+この実装の目的は，最終的な気配音提示モデルを完成させることではなく，以下を確認することである．
+
+- Unity上で取得した状態ログを学習データへ変換できるか
+- `cueType`，`presenceScore`，`volumeGain`などをモデルで推定できるか
+- 学習済みモデルをUnityに戻して利用できるか
+
+現在の教師ラベルは，ルールベース出力と研究者判断に基づく初期ラベルである．そのため，この結果は「学習パイプラインの初期ベースライン」であり，「利用者にとって最適な気配音を学習できた」という結果ではない．
+
+## Implemented Pipeline
+
+現在のパイプラインは以下である．
 
 ```text
-AUI学習に向けて、Unityの周辺人物検出ログから
-cue-control用の学習データセットを生成し、
-初期の軽量モデルを学習・評価・保存するパイプラインを実装した。
+Unity peripheral CSV logs
+-> cue_training_dataset.csv
+-> lightweight cue-control model
+-> Models/cue_model.json
+-> Assets/Models/cue_model_unity.json
+-> Unity LearnedCue playback
 ```
 
-## What Was Implemented
-
-### 1. Unity Log To Dataset
-
-UnityのCSVログをAUI学習用データセットに変換する処理を実装した。
-
-Script:
+データセット生成:
 
 ```powershell
 python Tools/build_cue_training_dataset.py --include-none
 ```
 
-Output:
-
-```text
-cue_training_dataset.csv
-```
-
-Current result:
-
-```text
-Source CSV files: 18
-Rows: 17,562
-```
-
-### 2. AUI Cue-Control Model Training
-
-AUIの初期モデルとして、以下を予測する軽量モデルを実装した。
-
-Predicted outputs:
-
-- `cueType`
-- `presenceScore`
-- `volumeGain`
-- `cueLowPassHz`
-- `cueReverbAmount`
-- `cueOcclusionGain`
-
-Script:
+モデル学習:
 
 ```powershell
 python Tools/train_cue_model.py --epochs 40
 ```
 
-Outputs:
+データセット確認:
 
-```text
-Models/cue_model.json
-cue_training_predictions.csv
+```powershell
+python Tools/summarize_cue_training_dataset.py
 ```
 
-### 3. Evaluation
+## Current Dataset
 
-Current training result:
+現在のデータセットは既存のUnityログから作成した．
 
 ```text
+Source CSV files: 18
+Rows: 17,562
 Train rows: 13,172
 Test rows: 4,390
-cueType test accuracy: 0.8091
-presenceScore MAE: 0.3074
-volumeGain MAE: 0.3074
-cueLowPassHz MAE: 0.0000
-cueReverbAmount MAE: 0.0000
-cueOcclusionGain MAE: 0.0000
 ```
 
-Class distribution in the full dataset:
+cueTypeの分布:
 
 ```text
 Footstep: 12,946
@@ -85,112 +63,77 @@ None: 2,104
 AmbientPresence: 248
 ```
 
-Dataset summary command:
+現在の入力情報:
 
-```powershell
-python Tools/summarize_cue_training_dataset.py
-```
+- target state flags: `outOfView`, `approaching`, `speaking`, `gazing`, `near`, `crossing`
+- distance
+- view angle
+- radial speed
+- lateral speed
+- user-local target position
+- cue condition
+- environment profile values
 
-Current dataset target ranges:
+現在の出力情報:
 
-```text
-presenceScore: min 0.0000 / max 1.0000 / mean 0.7035
-volumeGain: min 0.0000 / max 1.0000 / mean 0.7035
-cueLowPassHz: fixed at 22000
-cueReverbAmount: fixed at 0
-cueOcclusionGain: fixed at 1
-```
-
-## What This Means
-
-現時点で完了していること:
-
-- UnityログからAUI学習用CSVを作れる。
-- cueTypeとcue制御パラメータを教師ラベルとして扱える。
-- 学習、評価、モデル保存、予測CSV出力まで通っている。
-- 報告できる初期精度が出ている。
-
-重要な解釈:
-
-```text
-これは最終モデルではなく、AUI学習パイプラインが成立したことを示す初期ベースラインである。
-```
-
-## Current Limitation
-
-既存ログは古く、現在の `cueCondition` や環境適応パラメータが十分に含まれていない。
-
-そのため、古いログでは以下の値が固定に近い。
-
+- `cueType`
+- `presenceScore`
+- `volumeGain`
 - `cueLowPassHz`
 - `cueReverbAmount`
 - `cueOcclusionGain`
 
-このため、現在のMAEは0になっているが、これはモデルが高度な環境適応を学習したという意味ではない。
+## Current Result
 
-正確には、
-
-```text
-既存ログに対して、現在のrule-based cue policyを教師ラベルとして補完し、
-初期AUIモデルを学習した段階
-```
-
-である。
-
-## Next Implementation Step
-
-次に必要なのは、新しいUnityログ収集である。
-
-Collect logs for:
+初期モデルの評価結果は以下である．
 
 ```text
-Target scenarios:
-- Approach
-- BackApproach
-- Crossing
-- Speaking
-
-Cue conditions:
-- NoCue
-- FixedCue
-- StateBasedCue
-- EnvironmentAdaptiveCue
+cueType test accuracy: 0.8091
+presenceScore MAE: 0.3074
+volumeGain MAE: 0.3074
+cueLowPassHz MAE: 0.0000
+cueReverbAmount MAE: 0.0000
+cueOcclusionGain MAE: 0.0000
 ```
 
-特に `EnvironmentAdaptiveCue` では、以下を変えてログを取る。
+`cueLowPassHz`，`cueReverbAmount`，`cueOcclusionGain`のMAEが0である理由は，現在の古いログではこれらのラベルがほぼ固定値として補完されているためである．これはモデルが高度な環境適応を学習できたことを意味しない．
+
+## Interpretation
+
+今回確認できたことは以下である．
+
+- Unityログから学習データを生成できる
+- cueType分類とpresence/volume回帰の初期モデルを学習できる
+- 学習済みモデルをUnity用JSONとして保存できる
+- `LearnedCue`条件でUnity側へ接続できる
+
+一方で，現在の教師データには信頼性の課題がある．
+
+現在のラベルは，研究者自身が良いと判断した音やルールベース出力に基づいている．そのため，後方から接近する対象に対して足音がよいのか，気配音がよいのか，呼吸音がよいのかは十分に検証されていない．
+
+したがって，この学習結果は最終的な妥当性評価ではなく，評価済み教師データを作る前段階のベースラインとして扱う．
+
+## Next Step
+
+次の段階では，主観的な初期ラベルではなく，評価に基づく教師データを作成する．
+
+予定する流れ:
 
 ```text
-EnvironmentAcousticProfile:
-- roomScale
-- materialClass
-- reverbAmount
-- occlusionStrength
-- distanceAttenuation
-- rt60
-- drr
+1. Unityで状況を大量生成する
+   距離，方向，接近速度，発話状態，横切り状態，視野状態を組み合わせる．
+
+2. 各状況に複数のcue候補を提示する
+   Footstep，Voice，AmbientPresence，ClothingRustle，Breathing，Noneなどを用いる．
+
+3. 評価指標を測定する
+   位置認知精度，反応時間，接近認知，分かりやすさ，自然さ，不快感を記録する．
+
+4. 最も評価の高いcueを教師ラベルにする
+   cueType，presenceScore，volumeGainを評価結果から作成する．
+
+5. 評価済みラベルでモデルを再学習する
+   ルールベースモデル，主観ラベルモデル，評価済みラベルモデルを比較する．
 ```
 
-これにより、次の学習では以下が意味を持つ。
-
-- low-pass cutoff prediction
-- reverb prediction
-- occlusion gain prediction
-- environment-adaptive cue control
-
-## Suggested Slide Structure
-
-進捗報告スライドは5枚でよい。
-
-```text
-1. 研究全体: 新時代インターフェースとしてのAUI
-2. 今回の実装: Unityログ -> AUI学習データセット
-3. 学習モデル: cueType + cue parameters prediction
-4. 初期結果: 17,562 rows / cueType accuracy 0.8091
-5. 次の課題: EnvironmentAdaptiveCueログ収集と再学習
-```
-
-## One-Sentence Report
-
-```text
-Unity上の周辺人物状態ログを用いて、AUIが提示すべきcue種別とcue制御パラメータを予測する初期学習パイプラインを実装し、17,562サンプルで学習・評価まで完了した。
-```
+この流れにより，「自分が良いと思った音」ではなく，「シミュレーションと評価に基づく気配音」を学習対象にする．

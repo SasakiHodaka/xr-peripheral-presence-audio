@@ -48,6 +48,8 @@ RQ2: Does environment-adaptive cue control improve perceived naturalness and imm
 RQ3: Which target states benefit most from adaptive cueing: approaching, behind-user approach, crossing, or speaking?
 
 RQ4: Can compact logged state and cue parameters provide a useful dataset for training a cue-control model?
+
+RQ5: Can simulation-generated situations and perceptual evaluation produce more reliable cue labels than labels selected only by the developer?
 ```
 
 ## Hypotheses
@@ -59,7 +61,9 @@ H2: EnvironmentAdaptiveCue will improve perceived naturalness and immersion comp
 
 H3: BackApproach and OutOfView+Approaching cases will show the largest benefit from adaptive spatial audio cues.
 
-H4: A compact cue-control model can reproduce rule-based cue parameters from logged Unity data with low prediction error, enabling later replacement by learned estimators.
+H4: A compact cue-control model can learn evaluated cue labels from generated situation data with low prediction error.
+
+H5: Evaluation-derived cue labels will provide stronger evidence than developer-selected subjective labels because they are tied to detection time, localization accuracy, clarity, naturalness, and discomfort.
 ```
 
 ## Proposed Contribution
@@ -67,10 +71,10 @@ H4: A compact cue-control model can reproduce rule-based cue parameters from log
 The project should claim three contributions:
 
 1. An XR prototype that detects peripheral human-presence states and maps them to interpretable spatial audio cues.
-2. A comparison framework for `NoCue`, `FixedCue`, `StateBasedCue`, and `EnvironmentAdaptiveCue` conditions.
-3. A bridge from environment acoustics estimation to cue control through a compact `EnvironmentAcousticProfile`, rather than trying to render full acoustic fields first.
+2. A simulation-and-evaluation pipeline that converts generated human-presence situations and candidate cue performance into cue labels.
+3. A cue-control learning model that predicts `cueType`, `presenceScore`, and `volumeGain` from situation parameters.
 
-The third contribution is the long-term AI link. The first paper or thesis chapter should not depend on a full neural acoustic field. It should validate the cue-control structure first.
+Environment acoustics estimation and `EnvironmentAcousticProfile` remain long-term extensions. The first paper or thesis chapter should not depend on a full neural acoustic field. It should validate the cue-label generation and cue-control structure first.
 
 ## System Model
 
@@ -113,7 +117,7 @@ This is intentionally lower-dimensional than a full room impulse response. It is
 
 ## Experimental Conditions
 
-Use a two-axis design:
+Use a three-part design: generated target situation, cue candidate, and later cue condition.
 
 ### Target Scenario
 
@@ -129,6 +133,19 @@ Use a two-axis design:
 - `FixedCue`: same cue intensity/filtering regardless of state or environment.
 - `StateBasedCue`: cue type and strength depend on target state, distance, and speed.
 - `EnvironmentAdaptiveCue`: state-based cueing plus environment acoustic profile adaptation.
+
+### Cue Candidate for Label Generation
+
+For cue-label generation, each generated situation should be paired with several candidate cues:
+
+- `Footstep`
+- `Voice`
+- `AmbientPresence`
+- `ClothingRustle`
+- `Breathing`
+- `None`
+
+The cue candidate with the best combined evaluation result becomes the target label for that situation.
 
 Recommended first experiment:
 
@@ -208,6 +225,20 @@ Each trial should log:
 
 Current implementation already logs most system-side values. The missing pieces for the user study are participant response and subjective ratings.
 
+For cue-label generation, each sample should also log:
+
+- generated situation parameters: distance, direction, view state, approach speed, speaking, crossing
+- cue candidate type and playback parameters
+- localization accuracy
+- reaction time
+- approach recognition
+- clarity rating
+- naturalness rating
+- discomfort or annoyance rating
+- selected cue label
+- computed `presenceScore`
+- computed `volumeGain`
+
 ## Analysis Plan
 
 ### Main Comparisons
@@ -239,15 +270,20 @@ target scenario x cue condition
 
 BackApproach should benefit more from spatial audio than front Approach. Speaking may already be salient if voice is present, so its improvement may be smaller or mainly subjective.
 
-## AI Extension Plan
+## Cue-Label and AI Training Plan
 
 The AI component should be introduced in stages:
 
-1. Train a tabular baseline from Unity logs to reproduce rule-based cue outputs.
-2. Add manually controlled `EnvironmentAcousticProfile` labels.
-3. Generate SoundSpaces-style simulated audio-visual samples.
-4. Train an environment estimator that predicts compact acoustic profile values.
-5. Feed estimated profile values back into Unity cue control.
+1. Use the current developer-selected cue labels only as an initial prototype baseline.
+2. Generate many Unity situations by varying distance, direction, approach speed, speaking, crossing, and view state.
+3. Present multiple cue candidates for each situation.
+4. Evaluate the candidates using detection time, localization accuracy, approach recognition, clarity, naturalness, and discomfort.
+5. Convert the best-performing candidate into the `cueType` label and compute `presenceScore` and `volumeGain`.
+6. Train a tabular baseline, then a small NN or MLP, to predict cue labels from situation parameters.
+7. Compare the developer-label model, rule-based model, and evaluation-label model.
+8. Add environment-acoustic conditioning only after the cue-label dataset is reliable.
+
+This plan follows the data-generation idea behind SoundSpaces, SoundSpaces 2.0, Meta Audio Simulator, Neural Acoustic Fields, and self-supervised learning, but it keeps a key distinction clear: those systems can use physically simulated acoustic targets such as RIR, while this project must evaluate cue labels because cue usefulness depends on human perception.
 
 This staged plan keeps the research defensible even before the full audio-visual estimator is complete.
 
@@ -262,7 +298,7 @@ Learning a full neural acoustic field for XR
 Frame it as:
 
 ```text
-Adaptive cue control for peripheral human-presence awareness, with an extensible bridge to learned environment acoustics.
+Simulation and evaluation based cue-control learning for peripheral human-presence awareness in XR.
 ```
 
 This is narrower, testable, and better aligned with the current Unity prototype.
@@ -277,4 +313,6 @@ Before running participants, add:
 - trial randomization
 - per-condition summary export
 - simple questionnaire capture or external form mapping
-
+- generated situation condition grid
+- candidate cue selection and playback logging
+- evaluation-to-label dataset export

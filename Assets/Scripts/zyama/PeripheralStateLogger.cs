@@ -59,7 +59,7 @@ public class PeripheralStateLogger : MonoBehaviour
     {
         filePath = Path.Combine(Application.persistentDataPath, BuildFileName());
         writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,cueCandidate,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,expectedDirection,cueType,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,responseGiven,reactionTime,responseKey,directionResponse,directionCorrect,subjectiveRating,awarenessRating,naturalnessRating,annoyanceRating,confidenceRating,playbackCue,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
+        writer.WriteLine("participantId,conditionLabel,trialId,cueCondition,cueCandidate,roomScale,materialClass,environmentReverbAmount,environmentOcclusionStrength,environmentDistanceAttenuation,environmentRt60,environmentDrr,time,trialElapsed,trialDuration,targetId,state,outOfView,approaching,speaking,gazing,near,crossing,distance,viewAngle,radialSpeed,lateralSpeed,localX,localY,localZ,expectedDirection,cueType,directionLabel,presenceScore,volumeGain,cueLowPassHz,cueReverbAmount,cueOcclusionGain,cueReason,responseGiven,reactionTime,responseKey,directionResponse,directionCorrect,subjectiveRating,awarenessRating,naturalnessRating,annoyanceRating,confidenceRating,playbackCue,playbackActive,playbackVolume,playbackLowPassHz,playbackReverbAmount,footstepInterval");
         writer.Flush();
 
         Debug.Log("Peripheral CSV created: " + filePath);
@@ -217,11 +217,13 @@ public class PeripheralStateLogger : MonoBehaviour
             result.userLocalPosition.z.ToString("F3", CultureInfo.InvariantCulture),
             Escape(expectedDirection),
             cue.cueType.ToString(),
+            cue.directionLabel.ToString(),
             cue.presenceScore.ToString("F3", CultureInfo.InvariantCulture),
             cue.volumeGain.ToString("F3", CultureInfo.InvariantCulture),
             cue.lowPassHz.ToString("F0", CultureInfo.InvariantCulture),
             cue.reverbAmount.ToString("F3", CultureInfo.InvariantCulture),
             cue.occlusionGain.ToString("F3", CultureInfo.InvariantCulture),
+            Escape(cue.reason),
             GetResponseGiven(),
             FormatOptionalTime(GetReactionTime()),
             Escape(GetResponseKey()),

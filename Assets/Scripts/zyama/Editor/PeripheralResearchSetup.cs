@@ -4,6 +4,8 @@ using UnityEngine;
 
 public static class PeripheralResearchSetup
 {
+    private const string LearnedCueModelPath = "Assets/Models/cue_model_unity.json";
+
     [MenuItem("Tools/Peripheral Research/Create Demo Hierarchy")]
     public static void CreateDemoHierarchy()
     {
@@ -28,6 +30,7 @@ public static class PeripheralResearchSetup
         PeripheralTrialConditionController conditionController = GetOrAdd<PeripheralTrialConditionController>(systemObject);
         PeripheralAuiLogCollectionController auiLogController = GetOrAdd<PeripheralAuiLogCollectionController>(systemObject);
         PeripheralCueTrialSequencer trialSequencer = GetOrAdd<PeripheralCueTrialSequencer>(systemObject);
+        GetOrAdd<PeripheralSimulationDatasetGenerator>(systemObject);
         PeripheralDebugUI debugUI = GetOrAdd<PeripheralDebugUI>(systemObject);
 
         cueModel.environmentProfile = environmentProfile;
@@ -100,6 +103,41 @@ public static class PeripheralResearchSetup
 
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) != null)
             EditorSceneManager.OpenScene(scenePath);
+    }
+
+    [MenuItem("Tools/Peripheral Research/Use Learned Cue Model")]
+    public static void UseLearnedCueModel()
+    {
+        GameObject systemObject = GameObject.Find("PeripheralSystem");
+        if (systemObject == null)
+        {
+            Debug.LogWarning("PeripheralSystem was not found. Run Tools/Peripheral Research/Create Demo Hierarchy first.");
+            return;
+        }
+
+        PeripheralCueModel cueModel = systemObject.GetComponent<PeripheralCueModel>();
+        if (cueModel == null)
+            cueModel = Undo.AddComponent<PeripheralCueModel>(systemObject);
+
+        TextAsset learnedModel = AssetDatabase.LoadAssetAtPath<TextAsset>(LearnedCueModelPath);
+        if (learnedModel == null)
+        {
+            Debug.LogWarning("Learned cue model JSON was not found at " + LearnedCueModelPath + ". Run python Tools/train_cue_model.py first.");
+            return;
+        }
+
+        Undo.RecordObject(cueModel, "Use Learned Cue Model");
+        cueModel.comparisonCondition = PeripheralCueComparisonCondition.LearnedCue;
+        cueModel.learnedModelJson = learnedModel;
+        EditorUtility.SetDirty(cueModel);
+        Selection.activeGameObject = systemObject;
+        Debug.Log("PeripheralCueModel is now using LearnedCue with " + LearnedCueModelPath + ".");
+    }
+
+    [MenuItem("Tools/Peripheral Research/Use Learned Cue Model", true)]
+    public static bool ValidateUseLearnedCueModel()
+    {
+        return AssetDatabase.LoadAssetAtPath<TextAsset>(LearnedCueModelPath) != null;
     }
 
     private static void AssignDefaultClips(PeripheralCueAudioEmitter audioEmitter)

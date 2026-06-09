@@ -1,185 +1,138 @@
 # Current Progress Report
 
-更新日: 2026-06-04
+## 研究の現在位置
 
-## 今週の目的
+本研究は，XR空間において利用者の視野外または周辺に存在する他者を，空間音響cueによって自然に気づかせることを目的としている．
 
-今週は，XR空間における周辺人物への気づきを支援する気配音システムについて，被験者実験に進むためのUnity実験基盤と学習パイプラインを整備した．
+現在の実装では，Unity上で他者との距離，方向，接近状態，発話状態，横切り状態，視野状態などを取得し，それらの状態に応じて提示音の種類，存在感スコア，音量補正値を出力する仕組みを構築している．
 
-実装の中心は，便利機能そのものではなく，以下の研究フローをUnity上で実行できるようにすることである．
+ただし，現在の学習データは，研究者自身の判断やルールベースの出力をもとに作成した初期データである．そのため，Unityと学習パイプラインの動作確認には利用できるが，一般的な利用者にとって適切な気配音であることを示す根拠としては不十分である．
+
+今後の中心課題は，主観的な初期ラベルから，シミュレーションと評価に基づく教師データへ移行することである．
+
+## 現在のUnity実装
+
+現在のUnityプロトタイプには，以下の機能が実装されている．
+
+- `PeripheralStateDetector`: 他者の状態を検出する
+- `PeripheralCueModel`: 状態情報からcue種類，存在感スコア，音量補正値を推定する
+- `PeripheralCueAudioEmitter`: 推定されたcueを3D音響として再生する
+- `PeripheralStateLogger`: 状態情報とcue出力をCSVに記録する
+- `PeripheralTrialController`: 試行時間とpre-trial時間を管理する
+- `PeripheralTrialConditionController`: Approach，BackApproach，Crossing，Speakingなどの条件を切り替える
+- `PeripheralAuiLogCollectionController`: target scenario，cue condition，environment presetを自動で組み合わせてログを収集する
+
+現在のcue条件は以下である．
 
 ```text
-Unityで状況パターンを生成する
--> 各状況に複数の気配音候補を提示する
--> 被験者実験で認知性能を測る
--> 最も有効な音を正解ラベルにする
--> PresenceScoreと音量補正値を数理モデルで作る
--> そのデータでNNを学習させる
--> 未知状況での推定性能を評価する
+NoCue
+FixedCue
+StateBasedCue
+EnvironmentAdaptiveCue
+LearnedCue
 ```
 
-## 研究全体における位置づけ
+現在のtarget scenarioは以下である．
 
-本作業は，研究全体のうち以下に該当する．
+```text
+Approach
+BackApproach
+Crossing
+Speaking
+None
+```
 
-- 環境・行動情報の取得
-- データセット生成
-- 学習モデル構築の初期基盤
-- 被験者評価の準備
+## 現在の学習パイプライン
 
-まだ本番の被験者実験結果は入っていない．現在のUnityデモに入っている気配音ルールは，研究者の主観に基づく初期ルールであり，最終的な正解ラベルではない．
+Unityログから学習用データセットを作成し，軽量なcue-controlモデルを学習するパイプラインを構築している．
 
-## 現在できていること
-
-Unity側では，周辺人物の状態を検出し，状況に応じた気配音候補を出し分け，CSVログとして保存できる．
-
-主な実装済みコンポーネント:
-
-- `PeripheralStateDetector`: 周辺人物の状態を検出する．
-- `PeripheralCueModel`: `NoCue`，`FixedCue`，`StateBasedCue`，`LearnedCue`，`EnvironmentAdaptiveCue` を切り替える．
-- `PeripheralCueAudioEmitter`: 選択された気配音候補を3D音として再生する．
-- `PeripheralCueExperimentController`: 反応，方向回答，主観評価を受け取る．
-- `PeripheralCueTrialSequencer`: 状況と気配音候補の組み合わせを順番またはランダムに提示する．
-- `PeripheralStateLogger`: 状態，音，反応，方向正誤，主観評価をCSVに保存する．
-- `PeripheralDebugUI`: Play Mode中に現在の条件，候補音，反応状態を確認する．
-
-## 入力パラメータ
-
-今回扱う主な入力情報は以下である．
-
-| 項目 | 内容 |
-| -- | -- |
-| 状況条件 | `Approach`, `BackApproach`, `Crossing`, `Speaking` |
-| 気配音候補 | `NoCue`, `Footstep`, `Breathing`, `ClothRustle`, `Voice`, `AmbientPresence`, `MixedCue` |
-| 状態特徴量 | 視野外，接近，発話，注視，近距離，横切り |
-| 幾何特徴量 | 距離，視野角，ユーザ基準の相対位置 |
-| 運動特徴量 | 接近速度，横方向速度 |
-| 被験者入力 | 検出反応，方向回答，1から5の主観評価 |
-
-取得方法:
-
-Unity Play Mode上で試行を実行し，`PeripheralStateLogger` がCSVとして保存する．
-
-## 出力情報
-
-現在のCSVには，モデル学習と評価に必要な以下の情報を出力できる．
-
-| 項目 | 内容 |
-| -- | -- |
-| `cueCandidate` | 実験で提示した音候補 |
-| `cueType` | モデルまたはルールが出力した音種別 |
-| `presenceScore` | 周辺人物の存在感をどの程度表現するか |
-| `volumeGain` | 音量補正値 |
-| `reactionTime` | 検出反応時間 |
-| `directionResponse` | 被験者の方向回答 |
-| `directionCorrect` | 方向回答の正誤 |
-| `subjectiveRating` | 主観評価 |
-
-## 学習・解析パイプライン
-
-Python側では，Unityログから学習用データセットを作成し，軽量モデルを学習し，Unityで読めるJSONモデルとして出力できる．
-
-主なコマンド:
+データセット生成:
 
 ```powershell
-python Tools/analyze_peripheral_csv.py --cue-effectiveness
-python Tools/analyze_peripheral_csv.py --label-dataset
-python Tools/build_cue_training_dataset.py --include-none
+python Tools/build_cue_training_dataset.py
+```
+
+モデル学習:
+
+```powershell
 python Tools/train_cue_model.py --epochs 40
+```
+
+データセット確認:
+
+```powershell
 python Tools/summarize_cue_training_dataset.py
 ```
 
-現在の既存ログを使った初期モデル結果:
-
-| 項目 | 値 |
-| -- | -- |
-| 使用ログ | 23 files |
-| 全データ数 | 16,511 rows |
-| 学習データ | 12,383 rows |
-| テストデータ | 4,128 rows |
-| `cueType` accuracy | 0.7987 |
-| `presenceScore` MAE | 0.0566 |
-| `volumeGain` MAE | 0.0566 |
-
-注意点:
-
-この結果は，現時点では研究者主観の初期ルールを学習したベースラインである．被験者実験から得られた「人間にとって有効な音」を学習した結果ではない．
-
-## 教師データ生成方法
-
-今後の本来の教師データは，被験者実験の結果から作る．
-
-現在の方針:
-
-| 条件 | 生成ラベル |
-| -- | -- |
-| 検出成功率が高い | 有効な候補音として加点 |
-| 方向正答率が高い | 状況理解に有効として加点 |
-| 反応時間が短い | 気づきやすい音として加点 |
-| 主観評価が高い | 自然さ・納得感が高い音として加点 |
-
-解析スクリプトでは，暫定的に以下の指標で `cueEffectiveness` を計算する．
+出力:
 
 ```text
-detectionSuccess
-+ directionAccuracy
-- normalizedReactionTime
-+ normalizedRating
+cue_training_dataset.csv
+Models/cue_model.json
+Assets/Models/cue_model_unity.json
+cue_training_predictions.csv
 ```
 
-この値が最も高い音候補を，その状況の暫定的な正解ラベル候補にする．
+`Assets/Models/cue_model_unity.json` を `PeripheralCueModel.learnedModelJson` に割り当て，`comparisonCondition` を `LearnedCue` に設定することで，Unity上で学習済みモデルを利用できる．
 
-## 現在の限界
+## 現在のデータの限界
 
-現状で詰め切れていない点は以下である．
+現在のデータは，以下の意味では有効である．
 
-- 本番の被験者データがまだない．
-- 主観評価は現在1から5の単一評価であり，自然さ，不快感，気づきやすさを分けていない．
-- `cueEffectiveness` の式は暫定であり，実験目的に合わせて重み調整が必要である．
-- Unity上の音源素材と音量条件は，厳密な実験条件としてまだ固定し切れていない．
-- 現在の学習結果は，研究者主観ルールの再現性能であり，人間の認知性能を改善した証拠ではない．
-- Meta Audio SimulatorやSoundSpacesのような大規模音響シミュレーションは，まだ本実装には統合していない．
+- Unityログから学習データを作成できることの確認
+- cueTypeやpresenceScoreを学習モデルで推定できることの確認
+- ルールベース出力と学習モデル出力を比較するための初期ベースライン
 
-## 次に行う作業
+一方で，以下の限界がある．
 
-次回は，便利機能の追加ではなく，研究結果を出すための実装に進む．
+- 教師ラベルが研究者自身の判断やルールに依存している
+- 「その音が利用者にとって本当に分かりやすいか」は検証されていない
+- 後方接近時に足音がよいのか，気配音がよいのかは物理シミュレーションだけでは決まらない
+- SoundSpacesのようなRIR推定とは異なり，本研究の正解ラベルは人間の認知に依存する
 
-1. 少数条件でミニ実験ログを取る．
-   - `BackApproach`
-   - `Approach`
-   - `Crossing`
-   - `Speaking`
-   - `NoCue`, `Footstep`, `Breathing`, `AmbientPresence` などを比較する．
+したがって，現在の結果は「学習パイプラインが動作する初期実装結果」であり，「状況に応じた適切な気配音を決定できた」という最終結果ではない．
 
-2. `cueEffectiveness` を条件別・候補音別に集計する．
+## 今後の研究方針
 
-3. 各状況で最も有効な音をラベル候補として出力する．
-
-4. 研究者主観ルールと，被験者ログ由来ラベルを比較する．
-
-5. ラベルデータで `LearnedCue` モデルを再学習し，`StateBasedCue` と比較する．
-
-## 次回の実装候補
-
-次に入れるべき実装は，UIの便利機能ではなく，評価結果を直接作る機能である．
-
-優先度が高いもの:
-
-- `Tools/analyze_peripheral_csv.py` に条件別・候補音別ランキングのMarkdownレポート出力を追加する．
-- `cueCandidate` ごとの検出率，方向正答率，反応時間，主観評価，`cueEffectiveness` を表にする．
-- 各 `conditionLabel` で最良音を `isBestCue=True` として明示する．
-- `StateBasedCue` と `LearnedCue` の比較用サマリを出力する．
-
-## Git保存状況
-
-直近の保存済みコミット:
+今後は，以下の流れで教師データを再設計する．
 
 ```text
-90f136a Add randomized cue trial sequencing
-510d530 Add peripheral direction accuracy logging
-b805089 Export Unity-compatible cue model
-9136b6d Fix audio emitter script guid
-313855e Document hybrid cue learning roadmap
+1. Unityで状況を大量生成する
+   距離，方向，接近速度，発話状態，横切り状態，視野状態を組み合わせる．
+
+2. 各状況に複数の提示音候補を用意する
+   足音，声，気配音，衣擦れ音，呼吸音，無音などを提示候補にする．
+
+3. 被験者実験または評価タスクを行う
+   位置認知精度，反応時間，接近認知，分かりやすさ，自然さ，不快感を測定する．
+
+4. 最も認知支援効果が高い音を教師ラベルにする
+   「私が良いと思う音」ではなく，「評価結果に基づく音」を正解データにする．
+
+5. 最終データセットでNNまたは軽量モデルを学習する
+   入力状態からcueType，presenceScore，volumeGainを推定する．
+
+6. 未知状況とUnity上の動作で評価する
+   分類精度，スコア誤差，反応時間，位置認知精度，自然さを確認する．
 ```
 
-現在の作業ツリーは，この進捗メモ更新前の時点でクリーンだった．
+## 先行研究との関係
+
+Meta Audio Simulator，SoundSpaces，SoundSpaces 2.0，Neural Acoustic Fields，自己教師あり学習は，「人間が1件ずつラベル付けするのではなく，シミュレータから大量データを生成する」という点で本研究の参考になる．
+
+ただし，SoundSpacesでは，部屋形状，壁材質，音源位置，聞き手位置などからRIRを物理シミュレーションで計算できる．つまり，正解データは物理法則から導出できる．
+
+一方，本研究の出力は，足音，声，気配音，無音などの提示音選択である．これは物理法則だけでは決まらず，人間が他者の存在をどのように認知するかに依存する．そのため，本研究ではシミュレーションに加えて，人間の認知性能を評価する必要がある．
+
+## 次に行うこと
+
+次の実装・研究作業は以下である．
+
+1. Unityで生成する状況パラメータの表を作成する
+2. 各状況に対する提示音候補を整理する
+3. 位置認知精度，反応時間，自然さ，不快感を記録する評価形式を決める
+4. 評価結果から`cueType`，`presenceScore`，`volumeGain`を作るルールを定義する
+5. 評価済み教師データ用のCSVスキーマを実装する
+6. ルールベースモデル，主観ラベルモデル，評価済みラベルモデルを比較する
+
+この方針により，現在の主観的な初期データから，シミュレーションと実験に基づく気配音提示モデルへ移行する．

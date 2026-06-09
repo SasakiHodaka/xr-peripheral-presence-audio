@@ -102,10 +102,12 @@ public class PeripheralDebugUI : MonoBehaviour
                 " | angle " + result.viewAngle.ToString("F1") +
                 " | dir " + GetExpectedDirection(result) +
                 " | cue " + cue.cueType +
+                "/" + cue.directionLabel +
                 " " + cue.presenceScore.ToString("F2") +
                 " | audio " + playback.outputVolume.ToString("F2") +
                 " lp " + playback.lowPassHz.ToString("F0") +
-                " rv " + playback.reverbAmount.ToString("F2");
+                " rv " + playback.reverbAmount.ToString("F2") +
+                " | " + cue.reason;
 
             DrawLine(i + 6, line, GetStateColor(result.state));
         }
