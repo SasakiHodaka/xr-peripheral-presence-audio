@@ -109,7 +109,7 @@ def summarize(rows):
     return summaries
 
 
-def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS, objective_only=False):
     groups = defaultdict(list)
     for row in rows:
         condition = row.get("conditionLabel", "")
@@ -141,29 +141,40 @@ def cue_effectiveness_rows(rows, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS
         direction_accuracy = calculate_direction_accuracy(group_rows)
         direction_score = direction_accuracy if direction_accuracy is not None else direction_response_rate
 
-        mean_rating = mean_positive_rating(group_rows, "subjectiveRating")
-        mean_awareness = mean_positive_rating(group_rows, "awarenessRating")
-        mean_naturalness = mean_positive_rating(group_rows, "naturalnessRating")
-        mean_annoyance = mean_positive_rating(group_rows, "annoyanceRating")
-        mean_confidence = mean_positive_rating(group_rows, "confidenceRating")
-        normalized_rating = mean_rating / 5.0 if mean_rating > 0.0 else 0.0
-        awareness_score = mean_awareness / 5.0 if mean_awareness > 0.0 else normalized_rating
-        naturalness_score = mean_naturalness / 5.0 if mean_naturalness > 0.0 else 0.0
-        annoyance_penalty = mean_annoyance / 5.0 if mean_annoyance > 0.0 else 0.0
-        confidence_score = mean_confidence / 5.0 if mean_confidence > 0.0 else 0.0
+        if objective_only:
+            mean_rating = 0.0
+            mean_awareness = 0.0
+            mean_naturalness = 0.0
+            mean_annoyance = 0.0
+            mean_confidence = 0.0
+            normalized_rating = 0.0
+            awareness_score = 0.0
+            naturalness_score = 0.0
+            annoyance_penalty = 0.0
+            confidence_score = 0.0
+        else:
+            mean_rating = mean_positive_rating(group_rows, "subjectiveRating")
+            mean_awareness = mean_positive_rating(group_rows, "awarenessRating")
+            mean_naturalness = mean_positive_rating(group_rows, "naturalnessRating")
+            mean_annoyance = mean_positive_rating(group_rows, "annoyanceRating")
+            mean_confidence = mean_positive_rating(group_rows, "confidenceRating")
+            normalized_rating = mean_rating / 5.0 if mean_rating > 0.0 else 0.0
+            awareness_score = mean_awareness / 5.0 if mean_awareness > 0.0 else normalized_rating
+            naturalness_score = mean_naturalness / 5.0 if mean_naturalness > 0.0 else 0.0
+            annoyance_penalty = mean_annoyance / 5.0 if mean_annoyance > 0.0 else 0.0
+            confidence_score = mean_confidence / 5.0 if mean_confidence > 0.0 else 0.0
 
         playback_rows = sum(1 for row in group_rows if parse_bool(row.get("playbackActive")))
         playback_rate = playback_rows / max(1, len(group_rows))
 
-        cue_effectiveness = (
-            detection_success
-            + direction_score
-            - normalized_reaction_time
-            + awareness_score
-            + 0.5 * naturalness_score
-            + 0.25 * confidence_score
-            - 0.5 * annoyance_penalty
-        )
+        cue_effectiveness = detection_success + direction_score - normalized_reaction_time
+        if not objective_only:
+            cue_effectiveness += (
+                awareness_score
+                + 0.5 * naturalness_score
+                + 0.25 * confidence_score
+                - 0.5 * annoyance_penalty
+            )
 
         output.append(
             {
@@ -246,15 +257,19 @@ def cue_type_from_candidate(cue_candidate):
     return mapping.get(cue_candidate, cue_candidate)
 
 
-def target_values_from_effectiveness(row, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+def target_values_from_effectiveness(row, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS, objective_only=False):
     mean_reaction = parse_float(row.get("meanReactionTime"), reaction_time_cap)
     normalized_reaction = min(mean_reaction, reaction_time_cap) / reaction_time_cap
     detection = parse_float(row.get("detectionSuccess"))
     direction = parse_float(row.get("directionAccuracy"), None)
     if direction is None:
         direction = parse_float(row.get("directionResponseRate"))
-    awareness = parse_float(row.get("meanAwarenessRating")) / 5.0
-    rating = awareness if awareness > 0.0 else parse_float(row.get("meanRating")) / 5.0
+    if objective_only:
+        awareness = 0.0
+        rating = 0.0
+    else:
+        awareness = parse_float(row.get("meanAwarenessRating")) / 5.0
+        rating = awareness if awareness > 0.0 else parse_float(row.get("meanRating")) / 5.0
 
     presence_score = clamp01(
         0.15
@@ -636,7 +651,13 @@ def write_html_report(log_dir=DEFAULT_LOG_DIR, output_path=None, min_duration=MI
     return output_path, file_count, len(rows)
 
 
-def write_cue_effectiveness_csv(source_path, rows, output_path=None, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+def write_cue_effectiveness_csv(
+    source_path,
+    rows,
+    output_path=None,
+    reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS,
+    objective_only=False,
+):
     if output_path is None:
         output_path = source_path.with_name(source_path.stem + "_cue_effectiveness.csv")
 
@@ -659,7 +680,7 @@ def write_cue_effectiveness_csv(source_path, rows, output_path=None, reaction_ti
         "cueEffectiveness",
     ]
 
-    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap)
+    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap, objective_only)
     best_keys = {
         (row["conditionLabel"], row["targetId"], row["cueCandidate"])
         for row in best_cue_labels(effectiveness)
@@ -694,11 +715,17 @@ def write_cue_effectiveness_csv(source_path, rows, output_path=None, reaction_ti
     return output_path, len(effectiveness), len(best_keys)
 
 
-def write_label_dataset_csv(source_path, rows, output_path=None, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+def write_label_dataset_csv(
+    source_path,
+    rows,
+    output_path=None,
+    reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS,
+    objective_only=False,
+):
     if output_path is None:
         output_path = source_path.with_name(source_path.stem + "_cue_labels.csv")
 
-    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap)
+    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap, objective_only)
     labels = best_cue_labels(effectiveness)
 
     fieldnames = [
@@ -726,7 +753,11 @@ def write_label_dataset_csv(source_path, rows, output_path=None, reaction_time_c
         writer.writeheader()
 
         for item in labels:
-            cue_type, presence_score, volume_gain = target_values_from_effectiveness(item, reaction_time_cap)
+            cue_type, presence_score, volume_gain = target_values_from_effectiveness(
+                item,
+                reaction_time_cap,
+                objective_only,
+            )
             writer.writerow(
                 {
                     "conditionLabel": item["conditionLabel"],
@@ -752,11 +783,17 @@ def write_label_dataset_csv(source_path, rows, output_path=None, reaction_time_c
     return output_path, len(labels)
 
 
-def write_cue_ranking_report(source_path, rows, output_path=None, reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS):
+def write_cue_ranking_report(
+    source_path,
+    rows,
+    output_path=None,
+    reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS,
+    objective_only=False,
+):
     if output_path is None:
         output_path = source_path.with_name(source_path.stem + "_cue_ranking_report.md")
 
-    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap)
+    effectiveness = cue_effectiveness_rows(rows, reaction_time_cap, objective_only)
     grouped = defaultdict(list)
     for item in effectiveness:
         grouped[(item["conditionLabel"], item["targetId"])].append(item)
@@ -932,6 +969,11 @@ def main():
         help="Reaction time cap used for cueEffectiveness normalization. Defaults to 10.",
     )
     parser.add_argument(
+        "--objective-only",
+        action="store_true",
+        help="Build cue labels from objective metrics only. Subjective ratings are ignored.",
+    )
+    parser.add_argument(
         "--html-report-path",
         help="Output path for --html-report. Defaults to peripheral_report.html in the log directory.",
     )
@@ -974,6 +1016,7 @@ def main():
             rows,
             output_path,
             args.reaction_time_cap,
+            args.objective_only,
         )
         print(f"Cue effectiveness CSV: {written_path}")
         print(f"Cue candidate rows: {row_count}")
@@ -987,6 +1030,7 @@ def main():
             rows,
             output_path,
             args.reaction_time_cap,
+            args.objective_only,
         )
         print(f"Label dataset CSV: {written_path}")
         print(f"Best cue labels: {label_count}")
@@ -999,6 +1043,7 @@ def main():
             rows,
             output_path,
             args.reaction_time_cap,
+            args.objective_only,
         )
         print(f"Cue ranking report: {written_path}")
         print(f"Cue candidate rows: {row_count}")

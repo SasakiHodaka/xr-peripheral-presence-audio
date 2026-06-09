@@ -216,6 +216,14 @@ The current dependency-free baseline is:
 python Tools/train_cue_model.py --dataset cue_training_dataset.csv --classifier linear --classifier-epochs 220 --epochs 80
 ```
 
+For evaluation logs, the label builder can run in objective-only mode:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --label-dataset --objective-only
+```
+
+This keeps the first label pass tied to detection, direction, and reaction time instead of subjective ratings.
+
 It trains a lightweight cue-control model from `cue_training_dataset.csv` and writes:
 
 - `Assets/Models/cue_model_unity.json`

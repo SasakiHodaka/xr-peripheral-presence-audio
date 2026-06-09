@@ -16,6 +16,7 @@ Current status:
 - A lightweight cue-control model can predict `cueType`, `presenceScore`, and playback parameters.
 - The current simulation labels are reproducible baseline labels. Human feedback is used later for calibration and validation.
 - The next research step is to build evaluation-derived labels from generated situations and candidate cue performance.
+- Evaluation logs can also be converted with `Tools/analyze_peripheral_csv.py --label-dataset --objective-only` so the first label pass depends only on detection, direction, and reaction time.
 
 Important boundary:
 

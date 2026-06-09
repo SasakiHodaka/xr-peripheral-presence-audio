@@ -119,6 +119,8 @@ The random row split is high, but the group split is much harder. Adding `viewSt
 
 The larger limitation is still label validity. Objective simulation labels reduce developer subjectivity, but they do not prove that the cues are perceptually optimal. Final cue labels should be calibrated and evaluated with human feedback.
 
+Evaluation logs can now be converted with an objective-only path, so the first label pass can depend on detection, direction, and reaction time before subjective ratings are introduced.
+
 ## What Can Be Reported
 
 The next progress report can accurately say:
