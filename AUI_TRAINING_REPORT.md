@@ -53,19 +53,19 @@ Evaluation:
 
 - Classifier: dependency-free linear multi-class classifier
 - Split: random row split
-- Added categorical features: `directionLabel`, `viewState`, `motionState`
-- Train `cueType` accuracy: 0.9683
-- Test `cueType` accuracy: 0.9600
+- Added features: `directionLabel`, `viewState`, `motionState`, spatial hemisphere flags, `far`, `activeMotion`, and `passivePresenceCandidate`
+- Train `cueType` accuracy: 0.9850
+- Test `cueType` accuracy: 0.9750
 - Test per-class accuracy:
   - `AmbientPresence`: 1.0000
   - `Footstep`: 1.0000
-  - `None`: 0.3333
+  - `None`: 0.5833
   - `Voice`: 1.0000
-- Test `presenceScore` MAE: 0.0620
-- Test `volumeGain` MAE: 0.0489
-- Test `cueLowPassHz` MAE: 1009.3945
-- Test `cueReverbAmount` MAE: 0.0255
-- Test `cueOcclusionGain` MAE: 0.0238
+- Test `presenceScore` MAE: 0.0571
+- Test `volumeGain` MAE: 0.0461
+- Test `cueLowPassHz` MAE: 921.2766
+- Test `cueReverbAmount` MAE: 0.0251
+- Test `cueOcclusionGain` MAE: 0.0187
 
 Additional randomized simulation check with unknown condition groups:
 
@@ -73,14 +73,14 @@ Additional randomized simulation check with unknown condition groups:
 - Split: group split by `directionLabel,motionState`
 - Train rows: 3,749
 - Test rows: 1,251
-- Test `cueType` accuracy: 0.8066
+- Test `cueType` accuracy: 0.9145
 - Test per-class accuracy:
-  - `AmbientPresence`: 0.4190
+  - `AmbientPresence`: 0.7378
   - `Footstep`: 1.0000
-  - `None`: 0.9273
+  - `None`: 0.9939
   - `Voice`: 0.9885
-- Test `presenceScore` MAE: 0.0827
-- Test `volumeGain` MAE: 0.0788
+- Test `presenceScore` MAE: 0.0775
+- Test `volumeGain` MAE: 0.0729
 
 Class weighting check:
 
@@ -115,7 +115,7 @@ The current model learns:
 
 The current model is strong enough to verify the implementation pipeline: generated situation parameters can be converted into cue-control labels, learned on the PC, exported to Unity JSON, and loaded by `PeripheralCueModel` as `LearnedCue`.
 
-The random row split is high, but the group split is much harder. Adding `viewState` and `motionState` improved unknown-condition accuracy from 0.7282 to 0.8066. `AmbientPresence` remains the weakest class, so the next technical challenge is to improve how the model separates ambient presence from silence and other active cues in unseen conditions.
+The random row split is high, but the group split is much harder. Adding `viewState` and `motionState` first improved unknown-condition accuracy from 0.7282 to 0.8066. Adding objective spatial and activity features then improved group-split accuracy to 0.9145. `AmbientPresence` remains the weakest class, but its group-split accuracy improved from 0.4190 to 0.7378.
 
 The larger limitation is still label validity. Objective simulation labels reduce developer subjectivity, but they do not prove that the cues are perceptually optimal. Final cue labels should be calibrated and evaluated with human feedback.
 

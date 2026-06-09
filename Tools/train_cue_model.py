@@ -21,7 +21,20 @@ CATEGORICAL_COLUMNS = (
     "viewState",
     "motionState",
 )
-BOOLEAN_COLUMNS = ("outOfView", "approaching", "speaking", "gazing", "near", "crossing")
+BOOLEAN_COLUMNS = (
+    "outOfView",
+    "approaching",
+    "speaking",
+    "gazing",
+    "near",
+    "crossing",
+    "frontHemisphere",
+    "sideHemisphere",
+    "rearHemisphere",
+    "far",
+    "activeMotion",
+    "passivePresenceCandidate",
+)
 NUMERIC_COLUMNS = (
     "roomScale",
     "environmentReverbAmount",

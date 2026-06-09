@@ -31,6 +31,12 @@ FIELDNAMES = (
     "gazing",
     "near",
     "crossing",
+    "frontHemisphere",
+    "sideHemisphere",
+    "rearHemisphere",
+    "far",
+    "activeMotion",
+    "passivePresenceCandidate",
     "distance",
     "viewAngle",
     "radialSpeed",
@@ -137,6 +143,15 @@ def cue_type(score, speaking, approaching, crossing, out_of_view, near):
     return "None"
 
 
+def spatial_flags(x, z, distance, far_distance):
+    return {
+        "frontHemisphere": z > 0.35,
+        "sideHemisphere": abs(x) >= 0.35,
+        "rearHemisphere": z < -0.35,
+        "far": distance >= far_distance,
+    }
+
+
 def build_row(index, distance, angle, motion_state, speaking, gazing, args):
     x, y, z = local_position(distance, angle)
     state = view_state(angle)
@@ -145,6 +160,9 @@ def build_row(index, distance, angle, motion_state, speaking, gazing, args):
     crossing = motion_state == "Crossing"
     radial = radial_speed(motion_state)
     approaching = radial > 0.0
+    flags = spatial_flags(x, z, distance, args.far_distance)
+    active_motion = approaching or speaking or crossing
+    passive_presence_candidate = (not speaking) and (not approaching) and (crossing or out_of_view or near)
     lateral = (1.2 if x >= 0.0 else -1.2) if crossing else 0.0
     weights = {
         "distance": args.distance_weight,
@@ -184,6 +202,12 @@ def build_row(index, distance, angle, motion_state, speaking, gazing, args):
         "gazing": str(gazing),
         "near": str(near),
         "crossing": str(crossing),
+        "frontHemisphere": str(flags["frontHemisphere"]),
+        "sideHemisphere": str(flags["sideHemisphere"]),
+        "rearHemisphere": str(flags["rearHemisphere"]),
+        "far": str(flags["far"]),
+        "activeMotion": str(active_motion),
+        "passivePresenceCandidate": str(passive_presence_candidate),
         "distance": f"{distance:.6f}",
         "viewAngle": f"{abs(delta_angle(0.0, angle)):.6f}",
         "radialSpeed": f"{radial:.6f}",
@@ -247,6 +271,7 @@ def main():
     parser.add_argument("--min-distance", type=float, default=0.5)
     parser.add_argument("--max-distance", type=float, default=8.0)
     parser.add_argument("--near-distance", type=float, default=1.5)
+    parser.add_argument("--far-distance", type=float, default=5.0)
     parser.add_argument("--speaking-probability", type=float, default=0.25)
     parser.add_argument("--gazing-probability", type=float, default=0.25)
     parser.add_argument("--distance-weight", type=float, default=0.35)

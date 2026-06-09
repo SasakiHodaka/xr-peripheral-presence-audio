@@ -80,6 +80,12 @@ public class PeripheralCueFeatureContext
     public bool gazing;
     public bool near;
     public bool crossing;
+    public bool frontHemisphere;
+    public bool sideHemisphere;
+    public bool rearHemisphere;
+    public bool far;
+    public bool activeMotion;
+    public bool passivePresenceCandidate;
     public float distance;
     public float viewAngle;
     public float radialSpeed;
@@ -304,6 +310,12 @@ public class PeripheralCueLearnedModel
             case "gazing": return context.gazing;
             case "near": return context.near;
             case "crossing": return context.crossing;
+            case "frontHemisphere": return context.frontHemisphere;
+            case "sideHemisphere": return context.sideHemisphere;
+            case "rearHemisphere": return context.rearHemisphere;
+            case "far": return context.far;
+            case "activeMotion": return context.activeMotion;
+            case "passivePresenceCandidate": return context.passivePresenceCandidate;
             default: return false;
         }
     }

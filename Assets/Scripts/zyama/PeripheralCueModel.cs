@@ -172,6 +172,12 @@ public class PeripheralCueModel : MonoBehaviour
         context.gazing = HasState(result.state, PeripheralState.Gazing);
         context.near = near;
         context.crossing = crossing;
+        context.frontHemisphere = result.userLocalPosition.z > 0.35f;
+        context.sideHemisphere = Mathf.Abs(result.userLocalPosition.x) >= 0.35f;
+        context.rearHemisphere = result.userLocalPosition.z < -0.35f;
+        context.far = result.distance >= farDistance;
+        context.activeMotion = approaching || speaking || crossing;
+        context.passivePresenceCandidate = !speaking && !approaching && (crossing || outOfView || near);
         context.distance = result.distance;
         context.viewAngle = result.viewAngle;
         context.radialSpeed = result.radialSpeed;
