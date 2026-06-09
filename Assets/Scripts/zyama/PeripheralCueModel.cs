@@ -158,6 +158,8 @@ public class PeripheralCueModel : MonoBehaviour
         context.materialClass = profile != null ? profile.materialClass.ToString() : "Neutral";
         context.targetId = result.targetId;
         context.directionLabel = SelectDirectionLabel(result.userLocalPosition).ToString();
+        context.viewState = SelectViewState(result.viewAngle);
+        context.motionState = SelectMotionState(approaching, crossing, result.radialSpeed);
         context.roomScale = profile != null ? profile.roomScale : 1f;
         context.environmentReverbAmount = profile != null ? profile.reverbAmount : 0f;
         context.environmentOcclusionStrength = profile != null ? profile.occlusionStrength : 0f;
@@ -262,6 +264,31 @@ public class PeripheralCueModel : MonoBehaviour
             return localPosition.x < 0f ? PeripheralDirectionLabel.FrontLeft : PeripheralDirectionLabel.FrontRight;
 
         return localPosition.x < 0f ? PeripheralDirectionLabel.BackLeft : PeripheralDirectionLabel.BackRight;
+    }
+
+    private static string SelectViewState(float viewAngle)
+    {
+        if (viewAngle <= 50f)
+            return "InView";
+
+        if (viewAngle <= 85f)
+            return "Peripheral";
+
+        return "OutOfView";
+    }
+
+    private static string SelectMotionState(bool approaching, bool crossing, float radialSpeed)
+    {
+        if (crossing)
+            return "Crossing";
+
+        if (approaching)
+            return radialSpeed >= 0.9f ? "ApproachingFast" : "ApproachingSlow";
+
+        if (radialSpeed < -0.1f)
+            return "Leaving";
+
+        return "Static";
     }
 
     private static string BuildReason(

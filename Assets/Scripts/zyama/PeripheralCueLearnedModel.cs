@@ -66,6 +66,8 @@ public class PeripheralCueFeatureContext
     public string materialClass;
     public string targetId;
     public string directionLabel;
+    public string viewState;
+    public string motionState;
     public float roomScale = 1f;
     public float environmentReverbAmount;
     public float environmentOcclusionStrength;
@@ -286,6 +288,8 @@ public class PeripheralCueLearnedModel
             case "materialClass": return context.materialClass ?? string.Empty;
             case "targetId": return context.targetId ?? string.Empty;
             case "directionLabel": return context.directionLabel ?? string.Empty;
+            case "viewState": return context.viewState ?? string.Empty;
+            case "motionState": return context.motionState ?? string.Empty;
             default: return string.Empty;
         }
     }

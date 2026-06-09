@@ -12,7 +12,15 @@ DEFAULT_DATASET = Path("cue_training_dataset.csv")
 DEFAULT_MODEL_PATH = Path("Assets") / "Models" / "cue_model_unity.json"
 DEFAULT_PREDICTIONS_PATH = Path("cue_training_predictions.csv")
 
-CATEGORICAL_COLUMNS = ("conditionLabel", "cueCondition", "materialClass", "targetId", "directionLabel")
+CATEGORICAL_COLUMNS = (
+    "conditionLabel",
+    "cueCondition",
+    "materialClass",
+    "targetId",
+    "directionLabel",
+    "viewState",
+    "motionState",
+)
 BOOLEAN_COLUMNS = ("outOfView", "approaching", "speaking", "gazing", "near", "crossing")
 NUMERIC_COLUMNS = (
     "roomScale",

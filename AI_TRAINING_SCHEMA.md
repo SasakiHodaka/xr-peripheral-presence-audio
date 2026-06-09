@@ -86,6 +86,9 @@ Do not treat it as evidence that the selected cues are generally correct for use
 - `environmentRt60`
 - `environmentDrr`
 - `targetId`
+- `directionLabel`
+- `viewState`
+- `motionState`
 - `outOfView`
 - `approaching`
 - `speaking`
@@ -233,8 +236,9 @@ python Tools/train_cue_model.py --dataset cue_training_dataset_random.csv --spli
 
 Recent simulation check:
 
-- grid dataset: 800 rows, `cueType` test accuracy 0.955
-- randomized group split: 5000 rows, `cueType` test accuracy 0.728
+- grid dataset: 800 rows, `cueType` test accuracy 0.960
+- randomized group split: 5000 rows, `cueType` test accuracy 0.807
+- adding `viewState` and `motionState` improved unknown-condition accuracy from 0.728 to 0.807
 - numeric outputs are still baseline regressions and should be improved after feedback-derived labels are collected
 
 Use `AUI_TRAINING_REPORT.md` for the latest training metrics and interpretation.
