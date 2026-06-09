@@ -224,6 +224,12 @@ python Tools/analyze_peripheral_csv.py --label-dataset --objective-only
 
 This keeps the first label pass tied to detection, direction, and reaction time instead of subjective ratings.
 
+To export a combined training CSV from all source logs:
+
+```powershell
+python Tools/analyze_peripheral_csv.py --batch-label-dataset --objective-only
+```
+
 It trains a lightweight cue-control model from `cue_training_dataset.csv` and writes:
 
 - `Assets/Models/cue_model_unity.json`

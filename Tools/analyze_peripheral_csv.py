@@ -46,6 +46,13 @@ def source_csv_paths(log_dir=DEFAULT_LOG_DIR):
     )
 
 
+def source_rows_by_path(log_dir=DEFAULT_LOG_DIR):
+    rows_by_path = []
+    for path in source_csv_paths(log_dir):
+        rows_by_path.append((path, load_rows(path)))
+    return rows_by_path
+
+
 def latest_csv_path(log_dir=DEFAULT_LOG_DIR):
     files = list(reversed(source_csv_paths(log_dir)))
     if not files:
@@ -783,6 +790,81 @@ def write_label_dataset_csv(
     return output_path, len(labels)
 
 
+def write_batch_label_dataset_csv(
+    log_dir=DEFAULT_LOG_DIR,
+    output_path=None,
+    reaction_time_cap=DEFAULT_REACTION_TIME_SECONDS,
+    objective_only=False,
+):
+    if output_path is None:
+        output_path = Path(log_dir) / "peripheral_batch_cue_labels.csv"
+
+    fieldnames = [
+        "sourceCsv",
+        "conditionLabel",
+        "targetId",
+        "cueCandidate",
+        "cueType",
+        "presenceScore",
+        "volumeGain",
+        "cueEffectiveness",
+        "detectionSuccess",
+        "meanReactionTime",
+        "directionResponseRate",
+        "directionAccuracy",
+        "meanRating",
+        "meanAwarenessRating",
+        "meanNaturalnessRating",
+        "meanAnnoyanceRating",
+        "meanConfidenceRating",
+        "rows",
+    ]
+
+    rows_by_source = source_rows_by_path(log_dir)
+    if not rows_by_source:
+        raise FileNotFoundError(f"No peripheral CSV files found in {log_dir}")
+
+    combined_labels = []
+    for source_path, rows in rows_by_source:
+        effectiveness = cue_effectiveness_rows(rows, reaction_time_cap, objective_only)
+        labels = best_cue_labels(effectiveness)
+        for item in labels:
+            cue_type, presence_score, volume_gain = target_values_from_effectiveness(
+                item,
+                reaction_time_cap,
+                objective_only,
+            )
+            combined_labels.append(
+                {
+                    "sourceCsv": source_path.name,
+                    "conditionLabel": item["conditionLabel"],
+                    "targetId": item["targetId"],
+                    "cueCandidate": item["cueCandidate"],
+                    "cueType": cue_type,
+                    "presenceScore": f"{presence_score:.3f}",
+                    "volumeGain": f"{volume_gain:.3f}",
+                    "cueEffectiveness": f"{item['cueEffectiveness']:.3f}",
+                    "detectionSuccess": f"{item['detectionSuccess']:.3f}",
+                    "meanReactionTime": f"{item['meanReactionTime']:.3f}",
+                    "directionResponseRate": f"{item['directionResponseRate']:.3f}",
+                    "directionAccuracy": format_optional_float(item["directionAccuracy"]),
+                    "meanRating": f"{item['meanRating']:.3f}",
+                    "meanAwarenessRating": f"{item['meanAwarenessRating']:.3f}",
+                    "meanNaturalnessRating": f"{item['meanNaturalnessRating']:.3f}",
+                    "meanAnnoyanceRating": f"{item['meanAnnoyanceRating']:.3f}",
+                    "meanConfidenceRating": f"{item['meanConfidenceRating']:.3f}",
+                    "rows": item["rows"],
+                }
+            )
+
+    with output_path.open("w", encoding="utf-8-sig", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(combined_labels)
+
+    return output_path, len(rows_by_source), len(combined_labels)
+
+
 def write_cue_ranking_report(
     source_path,
     rows,
@@ -954,6 +1036,15 @@ def main():
         help="Output path for --label-dataset. Defaults to <input>_cue_labels.csv.",
     )
     parser.add_argument(
+        "--batch-label-dataset",
+        action="store_true",
+        help="Write best-cue labels for every peripheral source CSV in the log directory.",
+    )
+    parser.add_argument(
+        "--batch-label-dataset-csv",
+        help="Output path for --batch-label-dataset. Defaults to peripheral_batch_cue_labels.csv in the log directory.",
+    )
+    parser.add_argument(
         "--cue-ranking-report",
         action="store_true",
         help="Write a Markdown report ranking cue candidates by condition and target.",
@@ -1033,6 +1124,19 @@ def main():
             args.objective_only,
         )
         print(f"Label dataset CSV: {written_path}")
+        print(f"Best cue labels: {label_count}")
+        return
+
+    if args.batch_label_dataset:
+        output_path = Path(args.batch_label_dataset_csv) if args.batch_label_dataset_csv else None
+        written_path, source_count, label_count = write_batch_label_dataset_csv(
+            log_dir,
+            output_path,
+            args.reaction_time_cap,
+            args.objective_only,
+        )
+        print(f"Batch label dataset CSV: {written_path}")
+        print(f"Source CSV files: {source_count}")
         print(f"Best cue labels: {label_count}")
         return
 
