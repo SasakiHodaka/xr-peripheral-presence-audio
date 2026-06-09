@@ -320,7 +320,8 @@
         0.0,
         -0.22192949131919246
       ],
-      "bias": 0.11546564507675024
+      "bias": 0.11546564507675024,
+      "classWeight": 1.0
     },
     {
       "label": "Footstep",
@@ -357,7 +358,8 @@
         0.0,
         -0.03989701545269208
       ],
-      "bias": 0.013286246395193133
+      "bias": 0.013286246395193133,
+      "classWeight": 1.0
     },
     {
       "label": "None",
@@ -394,7 +396,8 @@
         0.0,
         0.3160000957966099
       ],
-      "bias": -0.2059244578068213
+      "bias": -0.2059244578068213,
+      "classWeight": 1.0
     },
     {
       "label": "Voice",
@@ -431,7 +434,8 @@
         0.0,
         -0.05417358902472541
       ],
-      "bias": 0.07717256633487792
+      "bias": 0.07717256633487792,
+      "classWeight": 1.0
     }
   ],
   "regressors": [
@@ -651,6 +655,38 @@
     "train": {
       "rows": 600,
       "cueTypeAccuracy": 0.9633333333333334,
+      "cueTypePerClassAccuracy": {
+        "AmbientPresence": 1.0,
+        "Footstep": 1.0,
+        "None": 0.08333333333333333,
+        "Voice": 1.0
+      },
+      "cueTypeConfusion": {
+        "AmbientPresence": {
+          "AmbientPresence": 150,
+          "Footstep": 0,
+          "None": 0,
+          "Voice": 0
+        },
+        "Footstep": {
+          "AmbientPresence": 0,
+          "Footstep": 129,
+          "None": 0,
+          "Voice": 0
+        },
+        "None": {
+          "AmbientPresence": 20,
+          "Footstep": 0,
+          "None": 2,
+          "Voice": 2
+        },
+        "Voice": {
+          "AmbientPresence": 0,
+          "Footstep": 0,
+          "None": 0,
+          "Voice": 297
+        }
+      },
       "regressionMae": {
         "presenceScore": 0.06698259120562389,
         "volumeGain": 0.050597556441585326,
@@ -662,6 +698,38 @@
     "test": {
       "rows": 200,
       "cueTypeAccuracy": 0.955,
+      "cueTypePerClassAccuracy": {
+        "AmbientPresence": 1.0,
+        "Footstep": 1.0,
+        "None": 0.25,
+        "Voice": 1.0
+      },
+      "cueTypeConfusion": {
+        "AmbientPresence": {
+          "AmbientPresence": 54,
+          "Footstep": 0,
+          "None": 0,
+          "Voice": 0
+        },
+        "Footstep": {
+          "AmbientPresence": 0,
+          "Footstep": 31,
+          "None": 0,
+          "Voice": 0
+        },
+        "None": {
+          "AmbientPresence": 8,
+          "Footstep": 0,
+          "None": 3,
+          "Voice": 1
+        },
+        "Voice": {
+          "AmbientPresence": 0,
+          "Footstep": 0,
+          "None": 0,
+          "Voice": 103
+        }
+      },
       "regressionMae": {
         "presenceScore": 0.07471527554321074,
         "volumeGain": 0.05510160859565563,
@@ -672,6 +740,9 @@
     },
     "epochs": 80,
     "classifier": "linear",
-    "classifierEpochs": 220
+    "classifierEpochs": 220,
+    "classWeight": "none",
+    "splitMode": "random",
+    "groupColumns": []
   }
 }

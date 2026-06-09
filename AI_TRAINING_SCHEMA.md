@@ -224,10 +224,17 @@ The current default classifier is a dependency-free linear multi-class classifie
 python Tools/train_cue_model.py --classifier centroid
 ```
 
+For a harder unseen-condition check, generate randomized data and split by condition groups:
+
+```powershell
+python Tools/generate_simulation_dataset.py --mode random --random-count 5000 --output cue_training_dataset_random.csv
+python Tools/train_cue_model.py --dataset cue_training_dataset_random.csv --split-mode group --group-columns directionLabel,motionState --predictions cue_training_predictions_group.csv
+```
+
 Recent simulation check:
 
 - grid dataset: 800 rows, `cueType` test accuracy 0.955
-- random dataset: 2000 rows, `cueType` test accuracy 0.898
+- randomized group split: 5000 rows, `cueType` test accuracy 0.728
 - numeric outputs are still baseline regressions and should be improved after feedback-derived labels are collected
 
 Use `AUI_TRAINING_REPORT.md` for the latest training metrics and interpretation.

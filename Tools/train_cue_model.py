@@ -67,6 +67,34 @@ def train_test_split(rows, test_ratio, seed):
     return shuffled[test_count:], shuffled[:test_count]
 
 
+def group_train_test_split(rows, test_ratio, seed, group_columns):
+    groups = defaultdict(list)
+    for row in rows:
+        key = tuple(row.get(column, "") for column in group_columns)
+        groups[key].append(row)
+
+    group_items = list(groups.items())
+    random.Random(seed).shuffle(group_items)
+    if len(group_items) <= 1:
+        return rows, []
+
+    target_test_count = max(1, int(round(len(rows) * test_ratio)))
+    train_rows = []
+    test_rows = []
+
+    for _, group_rows in group_items:
+        if len(test_rows) < target_test_count:
+            test_rows.extend(group_rows)
+        else:
+            train_rows.extend(group_rows)
+
+    if not train_rows:
+        train_rows = test_rows[len(test_rows) // 2 :]
+        test_rows = test_rows[: len(test_rows) // 2]
+
+    return train_rows, test_rows
+
+
 class FeatureEncoder:
     def __init__(self):
         self.categories = {}
@@ -176,13 +204,18 @@ def softmax(scores):
     return [value / total for value in exps]
 
 
-def train_linear_classifier(features, rows, epochs=140, learning_rate=0.05, l2=0.001):
+def train_linear_classifier(features, rows, epochs=140, learning_rate=0.05, l2=0.001, class_weight="balanced"):
     labels = sorted({row.get(TARGET_CLASS_COLUMN, "None") for row in rows})
     if not features or not labels:
         return []
 
     width = len(features[0])
     label_to_index = {label: index for index, label in enumerate(labels)}
+    class_counts = Counter(row.get(TARGET_CLASS_COLUMN, "None") for row in rows)
+    class_weights = {
+        label: (len(rows) / (len(labels) * class_counts[label])) if class_weight == "balanced" and class_counts[label] else 1.0
+        for label in labels
+    }
     weights = [[0.0] * width for _ in labels]
     biases = [0.0] * len(labels)
 
@@ -191,12 +224,14 @@ def train_linear_classifier(features, rows, epochs=140, learning_rate=0.05, l2=0
         grad_biases = [0.0] * len(labels)
 
         for vector, row in zip(features, rows):
-            target_index = label_to_index[row.get(TARGET_CLASS_COLUMN, "None")]
+            target_label = row.get(TARGET_CLASS_COLUMN, "None")
+            target_index = label_to_index[target_label]
+            sample_weight = class_weights[target_label]
             scores = [dot(class_weights, vector) + bias for class_weights, bias in zip(weights, biases)]
             probabilities = softmax(scores)
 
             for class_index, probability in enumerate(probabilities):
-                error = probability - (1.0 if class_index == target_index else 0.0)
+                error = (probability - (1.0 if class_index == target_index else 0.0)) * sample_weight
                 grad_biases[class_index] += error
                 for feature_index, value in enumerate(vector):
                     grad_weights[class_index][feature_index] += error * value
@@ -215,6 +250,7 @@ def train_linear_classifier(features, rows, epochs=140, learning_rate=0.05, l2=0
             "label": label,
             "weights": weights[index],
             "bias": biases[index],
+            "classWeight": class_weights[label],
         }
         for index, label in enumerate(labels)
     ]
@@ -290,11 +326,32 @@ def evaluate(classifier, regressors, features, rows, linear_classifier=None):
 
     correct = 0
     absolute_errors = {column: [] for column in TARGET_REGRESSION_COLUMNS}
+    labels = sorted({row.get(TARGET_CLASS_COLUMN, "None") for row in rows})
+    confusion = {
+        actual: {predicted: 0 for predicted in labels}
+        for actual in labels
+    }
+    per_class = {
+        label: {"correct": 0, "total": 0}
+        for label in labels
+    }
 
     for vector, row in zip(features, rows):
+        actual_class = row.get(TARGET_CLASS_COLUMN, "None")
         predicted_class = predict_linear_class(linear_classifier, vector) if linear_classifier else predict_class(classifier, vector)
-        if predicted_class == row.get(TARGET_CLASS_COLUMN, "None"):
+        if predicted_class not in labels:
+            labels.append(predicted_class)
+            for actual in confusion:
+                confusion[actual][predicted_class] = 0
+        if actual_class not in confusion:
+            confusion[actual_class] = {label: 0 for label in labels}
+            per_class[actual_class] = {"correct": 0, "total": 0}
+
+        confusion[actual_class][predicted_class] += 1
+        per_class[actual_class]["total"] += 1
+        if predicted_class == actual_class:
             correct += 1
+            per_class[actual_class]["correct"] += 1
 
         for column in TARGET_REGRESSION_COLUMNS:
             predicted_value = predict_regression(regressors[column], vector)
@@ -304,6 +361,11 @@ def evaluate(classifier, regressors, features, rows, linear_classifier=None):
     return {
         "rows": len(rows),
         "cueTypeAccuracy": correct / len(rows),
+        "cueTypePerClassAccuracy": {
+            label: values["correct"] / values["total"] if values["total"] else None
+            for label, values in sorted(per_class.items())
+        },
+        "cueTypeConfusion": confusion,
         "regressionMae": {
             column: sum(values) / len(values) if values else None
             for column, values in absolute_errors.items()
@@ -393,6 +455,10 @@ def print_metrics(metrics, class_counts, model_path, predictions_path):
     print(f"Class counts: {dict(class_counts)}")
     print(f"Train cueType accuracy: {format_optional(metrics['train']['cueTypeAccuracy'])}")
     print(f"Test cueType accuracy: {format_optional(metrics['test']['cueTypeAccuracy'])}")
+    if metrics["test"].get("cueTypePerClassAccuracy"):
+        print("Test cueType per-class accuracy:")
+        for label, value in metrics["test"]["cueTypePerClassAccuracy"].items():
+            print(f"  {label}: {format_optional(value)}")
     print("Test MAE:")
     for column, value in metrics["test"]["regressionMae"].items():
         print(f"  {column}: {format_optional(value)}")
@@ -416,6 +482,9 @@ def main():
     parser.add_argument("--epochs", type=int, default=80, help="Gradient-descent epochs for regression targets.")
     parser.add_argument("--classifier-epochs", type=int, default=160, help="Gradient-descent epochs for cueType classification.")
     parser.add_argument("--classifier", choices=("linear", "centroid"), default="linear", help="cueType classifier.")
+    parser.add_argument("--class-weight", choices=("none", "balanced"), default="none", help="Class weighting for linear classifier.")
+    parser.add_argument("--split-mode", choices=("random", "group"), default="random", help="Train/test split mode.")
+    parser.add_argument("--group-columns", default="directionLabel,motionState", help="Comma-separated columns for group split.")
     args = parser.parse_args()
 
     dataset_path = Path(args.dataset)
@@ -423,14 +492,23 @@ def main():
     if not rows:
         raise ValueError(f"No rows found in {dataset_path}")
 
-    train_rows, test_rows = train_test_split(rows, args.test_ratio, args.seed)
+    group_columns = [column.strip() for column in args.group_columns.split(",") if column.strip()]
+    if args.split_mode == "group":
+        train_rows, test_rows = group_train_test_split(rows, args.test_ratio, args.seed, group_columns)
+    else:
+        train_rows, test_rows = train_test_split(rows, args.test_ratio, args.seed)
     encoder = FeatureEncoder()
     encoder.fit(train_rows)
 
     train_features = encoder.transform(train_rows)
     test_features = encoder.transform(test_rows)
     classifier = train_centroid_classifier(train_features, train_rows)
-    linear_classifier = train_linear_classifier(train_features, train_rows, epochs=args.classifier_epochs) if args.classifier == "linear" else None
+    linear_classifier = train_linear_classifier(
+        train_features,
+        train_rows,
+        epochs=args.classifier_epochs,
+        class_weight=args.class_weight,
+    ) if args.classifier == "linear" else None
     regressors = train_regressors(train_features, train_rows, args.epochs)
 
     metrics = {
@@ -439,6 +517,9 @@ def main():
         "epochs": args.epochs,
         "classifier": args.classifier,
         "classifierEpochs": args.classifier_epochs,
+        "classWeight": args.class_weight if args.classifier == "linear" else "none",
+        "splitMode": args.split_mode,
+        "groupColumns": group_columns if args.split_mode == "group" else [],
     }
     class_counts = Counter(row.get(TARGET_CLASS_COLUMN, "None") for row in train_rows)
 
