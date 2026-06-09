@@ -11,9 +11,10 @@ The current implementation proves that the Unity logging and cue-control learnin
 Current status:
 
 - Unity can detect peripheral human-presence states and log cue parameters.
-- A first training dataset can be built from Unity logs.
+- A first training dataset can be generated from objective simulation parameters on the PC.
+- Unity logs can still be used for prototype and human-feedback datasets.
 - A lightweight cue-control model can predict `cueType`, `presenceScore`, and playback parameters.
-- The current labels are prototype labels based on rules and developer judgment.
+- The current simulation labels are reproducible baseline labels. Human feedback is used later for calibration and validation.
 - The next research step is to build evaluation-derived labels from generated situations and candidate cue performance.
 
 Important boundary:
@@ -44,7 +45,17 @@ Implemented components:
 - `PeripheralTrialController`: controls pre-trial and trial timing.
 - `PeripheralTrialConditionController`: switches demo conditions such as approach, back approach, crossing, speaking, and none.
 - `PeripheralAuiLogCollectionController`: cycles target scenarios, cue conditions, and environment presets for AUI training logs.
+- `PeripheralSimulationDatasetGenerator`: generates objective simulation-label CSV data from Unity.
 - `PeripheralCueModel.comparisonCondition`: switches `NoCue`, `FixedCue`, `StateBasedCue`, and `EnvironmentAdaptiveCue` cue-control modes.
+
+PC-only simulation and training:
+
+```powershell
+python Tools/generate_simulation_dataset.py --mode grid --output cue_training_dataset.csv
+python Tools/train_cue_model.py --dataset cue_training_dataset.csv --classifier linear --classifier-epochs 220 --epochs 80
+```
+
+This writes `Assets/Models/cue_model_unity.json`, which can be assigned to `PeripheralCueModel.learnedModelJson` and used with `LearnedCue`.
 
 Current cue flow:
 

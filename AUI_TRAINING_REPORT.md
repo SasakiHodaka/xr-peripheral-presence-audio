@@ -6,62 +6,70 @@ The first lightweight AUI cue-control learning pipeline is running end to end.
 
 This report describes an initial baseline. The current labels come from existing cue rules and developer-selected cue behavior, so they should be used to verify the training pipeline, not as final evidence that the cues are correct for users.
 
-Pipeline:
+Current simulation-first pipeline:
 
 ```text
-Unity peripheral CSV logs
+PC simulation dataset generation
 -> cue_training_dataset.csv
 -> lightweight cue-control model training
--> Models/cue_model.json
+-> Assets/Models/cue_model_unity.json
 -> cue_training_predictions.csv
 ```
 
 ## Commands
 
-Build the training dataset:
+Generate the simulation dataset:
 
 ```powershell
-python Tools/build_cue_training_dataset.py --include-none
+python Tools/generate_simulation_dataset.py --mode grid --output cue_training_dataset.csv
 ```
 
-Train and evaluate the first model:
+Train and evaluate the model:
 
 ```powershell
-python Tools/train_cue_model.py --epochs 40
+python Tools/train_cue_model.py --dataset cue_training_dataset.csv --classifier linear --classifier-epochs 220 --epochs 80
 ```
 
 ## Latest Training Run
 
 Dataset:
 
-- Source CSV files: 18
-- Rows: 17,562
+- Source: objective PC simulation grid
+- Rows: 800
 
 Train/test split:
 
-- Train rows: 13,172
-- Test rows: 4,390
+- Train rows: 600
+- Test rows: 200
 
 Training class counts:
 
-- `Footstep`: 9,670
-- `Voice`: 1,705
-- `None`: 1,619
-- `AmbientPresence`: 178
+- `Footstep`: 129
+- `Voice`: 297
+- `None`: 24
+- `AmbientPresence`: 150
 
 Evaluation:
 
-- Train `cueType` accuracy: 0.8070
-- Test `cueType` accuracy: 0.8091
-- Test `presenceScore` MAE: 0.3074
-- Test `volumeGain` MAE: 0.3074
-- Test `cueLowPassHz` MAE: 0.0000
-- Test `cueReverbAmount` MAE: 0.0000
-- Test `cueOcclusionGain` MAE: 0.0000
+- Classifier: dependency-free linear multi-class classifier
+- Train `cueType` accuracy: 0.9633
+- Test `cueType` accuracy: 0.9550
+- Test `presenceScore` MAE: 0.0747
+- Test `volumeGain` MAE: 0.0551
+- Test `cueLowPassHz` MAE: 1025.1372
+- Test `cueReverbAmount` MAE: 0.0250
+- Test `cueOcclusionGain` MAE: 0.0250
+
+Additional randomized simulation check:
+
+- Rows: 2,000
+- Test `cueType` accuracy: 0.8980
+- Test `presenceScore` MAE: 0.0781
+- Test `volumeGain` MAE: 0.0566
 
 Outputs:
 
-- `Models/cue_model.json`
+- `Assets/Models/cue_model_unity.json`
 - `cue_training_dataset.csv`
 - `cue_training_predictions.csv`
 
@@ -73,9 +81,9 @@ python Tools/summarize_cue_training_dataset.py
 
 ## Interpretation
 
-This is an initial baseline, not the final AUI model.
+This is a simulation-first baseline, not the final AUI model.
 
-The current dataset is generated from existing Unity logs. Older logs did not contain cue target columns, so `Tools/build_cue_training_dataset.py` fills missing cue labels using the current rule-based cue policy. This allows model training to start before new experiment logs are collected.
+The current dataset is generated from objective situation parameters rather than the researcher's subjective cue choices. The labels are still baseline labels because the score weights are defined by an explicit objective model. Human feedback should later be used to calibrate those weights and validate whether the generated cues are perceptually appropriate.
 
 The current model learns:
 
@@ -84,20 +92,20 @@ The current model learns:
 - volume gain regression
 - low-pass / reverb / occlusion output reproduction
 
-The zero MAE for low-pass, reverb, and occlusion means the current generated labels are constant for older logs. These targets will become meaningful only after new data contains real variation.
+The current model is strong enough to verify the implementation pipeline: generated situation parameters can be converted into cue-control labels, learned on the PC, exported to Unity JSON, and loaded by `PeripheralCueModel` as `LearnedCue`.
 
-The larger limitation is label reliability. The current dataset can show that the model can reproduce prototype labels, but it cannot prove that those labels are perceptually appropriate. Final cue labels should be generated from simulated situations and evaluation results.
+The larger limitation is still label validity. Objective simulation labels reduce developer subjectivity, but they do not prove that the cues are perceptually optimal. Final cue labels should be calibrated and evaluated with human feedback.
 
 ## What Can Be Reported
 
 The next progress report can accurately say:
 
 ```text
-Unity logs were converted into a cue-control training dataset.
-An initial AUI learning pipeline was implemented.
-A lightweight baseline model was trained and evaluated.
-The model currently predicts cue type and basic cue parameters from target state, distance, speed, and local position.
-The current labels are prototype labels, so the next step is to build evaluation-derived cue labels from generated situations and candidate cue performance.
+Objective simulation data were generated on the PC.
+A lightweight AUI cue-control model was trained from the generated data.
+The model currently predicts cue type and basic cue parameters from target state, distance, speed, direction, and local position.
+The model was exported to a Unity-compatible JSON file.
+The next step is to use human feedback to calibrate and validate the objective simulation labels.
 ```
 
 ## Next Steps

@@ -12,7 +12,7 @@ DEFAULT_DATASET = Path("cue_training_dataset.csv")
 DEFAULT_MODEL_PATH = Path("Assets") / "Models" / "cue_model_unity.json"
 DEFAULT_PREDICTIONS_PATH = Path("cue_training_predictions.csv")
 
-CATEGORICAL_COLUMNS = ("conditionLabel", "cueCondition", "materialClass", "targetId")
+CATEGORICAL_COLUMNS = ("conditionLabel", "cueCondition", "materialClass", "targetId", "directionLabel")
 BOOLEAN_COLUMNS = ("outOfView", "approaching", "speaking", "gazing", "near", "crossing")
 NUMERIC_COLUMNS = (
     "roomScale",
@@ -166,6 +166,75 @@ def predict_class(model, vector):
     return min(model.items(), key=lambda item: squared_distance(vector, item[1]))[0]
 
 
+def softmax(scores):
+    if not scores:
+        return []
+
+    maximum = max(scores)
+    exps = [math.exp(score - maximum) for score in scores]
+    total = sum(exps) or 1.0
+    return [value / total for value in exps]
+
+
+def train_linear_classifier(features, rows, epochs=140, learning_rate=0.05, l2=0.001):
+    labels = sorted({row.get(TARGET_CLASS_COLUMN, "None") for row in rows})
+    if not features or not labels:
+        return []
+
+    width = len(features[0])
+    label_to_index = {label: index for index, label in enumerate(labels)}
+    weights = [[0.0] * width for _ in labels]
+    biases = [0.0] * len(labels)
+
+    for _ in range(epochs):
+        grad_weights = [[0.0] * width for _ in labels]
+        grad_biases = [0.0] * len(labels)
+
+        for vector, row in zip(features, rows):
+            target_index = label_to_index[row.get(TARGET_CLASS_COLUMN, "None")]
+            scores = [dot(class_weights, vector) + bias for class_weights, bias in zip(weights, biases)]
+            probabilities = softmax(scores)
+
+            for class_index, probability in enumerate(probabilities):
+                error = probability - (1.0 if class_index == target_index else 0.0)
+                grad_biases[class_index] += error
+                for feature_index, value in enumerate(vector):
+                    grad_weights[class_index][feature_index] += error * value
+
+        scale = 1.0 / len(features)
+        for class_index in range(len(labels)):
+            biases[class_index] -= learning_rate * grad_biases[class_index] * scale
+            for feature_index in range(width):
+                regularization = l2 * weights[class_index][feature_index]
+                weights[class_index][feature_index] -= learning_rate * (
+                    grad_weights[class_index][feature_index] * scale + regularization
+                )
+
+    return [
+        {
+            "label": label,
+            "weights": weights[index],
+            "bias": biases[index],
+        }
+        for index, label in enumerate(labels)
+    ]
+
+
+def predict_linear_class(model, vector):
+    if not model:
+        return "None"
+
+    best = None
+    best_score = float("-inf")
+    for candidate in model:
+        score = dot(candidate["weights"], vector) + candidate["bias"]
+        if score > best_score:
+            best_score = score
+            best = candidate
+
+    return best["label"] if best else "None"
+
+
 def train_linear_regressor(features, values, epochs=80, learning_rate=0.03, l2=0.001):
     if not features:
         return {"weights": [], "bias": 0.0}
@@ -211,7 +280,7 @@ def train_regressors(features, rows, epochs):
     return models
 
 
-def evaluate(classifier, regressors, features, rows):
+def evaluate(classifier, regressors, features, rows, linear_classifier=None):
     if not rows:
         return {
             "rows": 0,
@@ -223,7 +292,7 @@ def evaluate(classifier, regressors, features, rows):
     absolute_errors = {column: [] for column in TARGET_REGRESSION_COLUMNS}
 
     for vector, row in zip(features, rows):
-        predicted_class = predict_class(classifier, vector)
+        predicted_class = predict_linear_class(linear_classifier, vector) if linear_classifier else predict_class(classifier, vector)
         if predicted_class == row.get(TARGET_CLASS_COLUMN, "None"):
             correct += 1
 
@@ -242,7 +311,7 @@ def evaluate(classifier, regressors, features, rows):
     }
 
 
-def write_predictions(path, classifier, regressors, features, rows):
+def write_predictions(path, classifier, regressors, features, rows, linear_classifier=None):
     fieldnames = [
         "sourceCsv",
         "conditionLabel",
@@ -269,7 +338,7 @@ def write_predictions(path, classifier, regressors, features, rows):
                 "cueCondition": row.get("cueCondition", ""),
                 "targetId": row.get("targetId", ""),
                 "actualCueType": row.get(TARGET_CLASS_COLUMN, ""),
-                "predictedCueType": predict_class(classifier, vector),
+                "predictedCueType": predict_linear_class(linear_classifier, vector) if linear_classifier else predict_class(classifier, vector),
             }
 
             for column in TARGET_REGRESSION_COLUMNS:
@@ -282,10 +351,10 @@ def write_predictions(path, classifier, regressors, features, rows):
             writer.writerow(output)
 
 
-def save_model(path, encoder, classifier, regressors, metrics, class_counts):
+def save_model(path, encoder, classifier, regressors, metrics, class_counts, linear_classifier=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "modelType": "centroid_classifier_plus_linear_regressors",
+        "modelType": "linear_classifier_plus_linear_regressors" if linear_classifier else "centroid_classifier_plus_linear_regressors",
         "featureEncoder": encoder.to_dict(),
         "classifier": [
             {
@@ -294,6 +363,7 @@ def save_model(path, encoder, classifier, regressors, metrics, class_counts):
             }
             for label, centroid in sorted(classifier.items())
         ],
+        "linearClassifier": linear_classifier or [],
         "regressors": [
             {
                 "target": target,
@@ -344,6 +414,8 @@ def main():
     parser.add_argument("--test-ratio", type=float, default=0.25, help="Held-out test split ratio.")
     parser.add_argument("--seed", type=int, default=7, help="Random seed for train/test split.")
     parser.add_argument("--epochs", type=int, default=80, help="Gradient-descent epochs for regression targets.")
+    parser.add_argument("--classifier-epochs", type=int, default=160, help="Gradient-descent epochs for cueType classification.")
+    parser.add_argument("--classifier", choices=("linear", "centroid"), default="linear", help="cueType classifier.")
     args = parser.parse_args()
 
     dataset_path = Path(args.dataset)
@@ -358,19 +430,22 @@ def main():
     train_features = encoder.transform(train_rows)
     test_features = encoder.transform(test_rows)
     classifier = train_centroid_classifier(train_features, train_rows)
+    linear_classifier = train_linear_classifier(train_features, train_rows, epochs=args.classifier_epochs) if args.classifier == "linear" else None
     regressors = train_regressors(train_features, train_rows, args.epochs)
 
     metrics = {
-        "train": evaluate(classifier, regressors, train_features, train_rows),
-        "test": evaluate(classifier, regressors, test_features, test_rows),
+        "train": evaluate(classifier, regressors, train_features, train_rows, linear_classifier),
+        "test": evaluate(classifier, regressors, test_features, test_rows, linear_classifier),
         "epochs": args.epochs,
+        "classifier": args.classifier,
+        "classifierEpochs": args.classifier_epochs,
     }
     class_counts = Counter(row.get(TARGET_CLASS_COLUMN, "None") for row in train_rows)
 
     model_path = Path(args.model)
     predictions_path = Path(args.predictions)
-    save_model(model_path, encoder, classifier, regressors, metrics, class_counts)
-    write_predictions(predictions_path, classifier, regressors, test_features, test_rows)
+    save_model(model_path, encoder, classifier, regressors, metrics, class_counts, linear_classifier)
+    write_predictions(predictions_path, classifier, regressors, test_features, test_rows, linear_classifier)
     print_metrics(metrics, class_counts, model_path, predictions_path)
 
 

@@ -189,15 +189,26 @@ Compare at least three label/model sources:
 
 ## Current Training Script
 
+Generate a reproducible simulation-first dataset without opening Unity:
+
+```powershell
+python Tools/generate_simulation_dataset.py --mode grid --output cue_training_dataset.csv
+```
+
+For a broader randomized dataset:
+
+```powershell
+python Tools/generate_simulation_dataset.py --mode random --random-count 5000 --output cue_training_dataset_random.csv
+```
+
 The current dependency-free baseline is:
 
 ```powershell
-python Tools/train_cue_model.py --epochs 40
+python Tools/train_cue_model.py --dataset cue_training_dataset.csv --classifier linear --classifier-epochs 220 --epochs 80
 ```
 
 It trains a lightweight cue-control model from `cue_training_dataset.csv` and writes:
 
-- `Models/cue_model.json`
 - `Assets/Models/cue_model_unity.json`
 - `cue_training_predictions.csv`
 
@@ -206,6 +217,18 @@ It trains a lightweight cue-control model from `cue_training_dataset.csv` and wr
 `PeripheralCueModel.comparisonCondition` to `LearnedCue` to use the trained
 model in Play Mode. If the asset is not assigned, `PeripheralCueModel` falls
 back to the existing rule-based cue prediction.
+
+The current default classifier is a dependency-free linear multi-class classifier for `cueType`, plus linear regressors for the numeric cue parameters. The older centroid classifier remains available:
+
+```powershell
+python Tools/train_cue_model.py --classifier centroid
+```
+
+Recent simulation check:
+
+- grid dataset: 800 rows, `cueType` test accuracy 0.955
+- random dataset: 2000 rows, `cueType` test accuracy 0.898
+- numeric outputs are still baseline regressions and should be improved after feedback-derived labels are collected
 
 Use `AUI_TRAINING_REPORT.md` for the latest training metrics and interpretation.
 

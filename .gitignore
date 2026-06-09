@@ -44,8 +44,11 @@ desktop.ini
 
 # Local experiment outputs
 *.log
+__pycache__/
 peripheral_state_log.csv
 presence_training_data_runtime.csv
 cue_training_dataset.csv
 cue_training_predictions.csv
+cue_training_dataset_*.csv
+cue_training_predictions_*.csv
 /Models/

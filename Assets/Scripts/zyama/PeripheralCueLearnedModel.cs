@@ -7,6 +7,7 @@ public class PeripheralCueLearnedModelData
     public string modelType;
     public PeripheralCueFeatureEncoderData featureEncoder;
     public PeripheralCueClassCentroid[] classifier;
+    public PeripheralCueLinearClass[] linearClassifier;
     public PeripheralCueRegressor[] regressors;
 }
 
@@ -43,6 +44,14 @@ public class PeripheralCueClassCentroid
 }
 
 [Serializable]
+public class PeripheralCueLinearClass
+{
+    public string label;
+    public float[] weights;
+    public float bias;
+}
+
+[Serializable]
 public class PeripheralCueRegressor
 {
     public string target;
@@ -56,6 +65,7 @@ public class PeripheralCueFeatureContext
     public string cueCondition;
     public string materialClass;
     public string targetId;
+    public string directionLabel;
     public float roomScale = 1f;
     public float environmentReverbAmount;
     public float environmentOcclusionStrength;
@@ -182,6 +192,9 @@ public class PeripheralCueLearnedModel
 
     private string PredictClass(float[] features)
     {
+        if (data.linearClassifier != null && data.linearClassifier.Length > 0)
+            return PredictLinearClass(features);
+
         PeripheralCueClassCentroid best = null;
         float bestDistance = float.PositiveInfinity;
 
@@ -192,6 +205,25 @@ public class PeripheralCueLearnedModel
             if (distance < bestDistance)
             {
                 bestDistance = distance;
+                best = candidate;
+            }
+        }
+
+        return best != null ? best.label : "None";
+    }
+
+    private string PredictLinearClass(float[] features)
+    {
+        PeripheralCueLinearClass best = null;
+        float bestScore = float.NegativeInfinity;
+
+        for (int i = 0; i < data.linearClassifier.Length; i++)
+        {
+            PeripheralCueLinearClass candidate = data.linearClassifier[i];
+            float score = Dot(candidate.weights, features) + candidate.bias;
+            if (score > bestScore)
+            {
+                bestScore = score;
                 best = candidate;
             }
         }
@@ -253,6 +285,7 @@ public class PeripheralCueLearnedModel
             case "cueCondition": return context.cueCondition ?? string.Empty;
             case "materialClass": return context.materialClass ?? string.Empty;
             case "targetId": return context.targetId ?? string.Empty;
+            case "directionLabel": return context.directionLabel ?? string.Empty;
             default: return string.Empty;
         }
     }

@@ -157,6 +157,7 @@ public class PeripheralCueModel : MonoBehaviour
         context.cueCondition = learnedFeatureCueCondition;
         context.materialClass = profile != null ? profile.materialClass.ToString() : "Neutral";
         context.targetId = result.targetId;
+        context.directionLabel = SelectDirectionLabel(result.userLocalPosition).ToString();
         context.roomScale = profile != null ? profile.roomScale : 1f;
         context.environmentReverbAmount = profile != null ? profile.reverbAmount : 0f;
         context.environmentOcclusionStrength = profile != null ? profile.occlusionStrength : 0f;
