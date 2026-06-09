@@ -52,20 +52,20 @@ Training class counts:
 Evaluation:
 
 - Classifier: dependency-free linear multi-class classifier
-- Split: random row split
+- Split: group split on the simulation fallback dataset
 - Added features: `directionLabel`, `viewState`, `motionState`, spatial hemisphere flags, `far`, `activeMotion`, and `passivePresenceCandidate`
-- Train `cueType` accuracy: 0.9850
-- Test `cueType` accuracy: 0.9750
+- Train `cueType` accuracy: 0.9900
+- Test `cueType` accuracy: 0.9900
 - Test per-class accuracy:
   - `AmbientPresence`: 1.0000
   - `Footstep`: 1.0000
-  - `None`: 0.5833
+  - `None`: 0.8333
   - `Voice`: 1.0000
-- Test `presenceScore` MAE: 0.0571
-- Test `volumeGain` MAE: 0.0461
-- Test `cueLowPassHz` MAE: 921.2766
-- Test `cueReverbAmount` MAE: 0.0251
-- Test `cueOcclusionGain` MAE: 0.0187
+- Test `presenceScore` MAE: 0.0602
+- Test `volumeGain` MAE: 0.0505
+- Test `cueLowPassHz` MAE: 944.4028
+- Test `cueReverbAmount` MAE: 0.0298
+- Test `cueOcclusionGain` MAE: 0.0215
 
 Additional randomized simulation check with unknown condition groups:
 
@@ -120,6 +120,8 @@ The random row split is high, but the group split is much harder. Adding `viewSt
 The larger limitation is still label validity. Objective simulation labels reduce developer subjectivity, but they do not prove that the cues are perceptually optimal. Final cue labels should be calibrated and evaluated with human feedback.
 
 Evaluation logs can now be converted with an objective-only path, so the first label pass can depend on detection, direction, and reaction time before subjective ratings are introduced.
+At the moment, the archived Unity logs in this repo still do not contain `cueCandidate` records, so the combined training script falls back to the simulation dataset until evaluation logging is prepared.
+The latest retrain used `Tools/train_from_evaluation_logs.py`, which hit that fallback path and retrained the Unity model from the simulation dataset.
 
 ## What Can Be Reported
 

@@ -19,6 +19,7 @@ Current status:
 - Evaluation logs can also be converted with `Tools/analyze_peripheral_csv.py --label-dataset --objective-only` so the first label pass depends only on detection, direction, and reaction time.
 - All source logs in a directory can be combined with `Tools/analyze_peripheral_csv.py --batch-label-dataset --objective-only`.
 - The full evaluation-to-training pipeline can be run with `Tools/train_from_evaluation_logs.py`.
+- If the current logs do not contain cue-candidate records yet, that script falls back to the existing simulation dataset so training still completes.
 
 Important boundary:
 

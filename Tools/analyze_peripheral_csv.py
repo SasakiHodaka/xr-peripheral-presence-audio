@@ -30,6 +30,11 @@ def is_source_log(path):
         "_cue_effectiveness",
         "_cue_labels",
         "_cue_ranking_report",
+        "_cue_labels_summary",
+        "_cue_effectiveness_summary",
+        "_cue_ranking_report_summary",
+        "_batch_summary",
+        "_batch_cue_labels",
     )
     return (
         path.name.startswith("peripheral_state_log")

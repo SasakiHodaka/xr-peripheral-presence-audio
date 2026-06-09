@@ -236,6 +236,8 @@ To run batch labeling and training in one step:
 python Tools/train_from_evaluation_logs.py
 ```
 
+If the available logs do not yet include cue-candidate records, that command falls back to the existing simulation dataset so the model can still be retrained while evaluation logging is being prepared.
+
 It trains a lightweight cue-control model from `cue_training_dataset.csv` and writes:
 
 - `Assets/Models/cue_model_unity.json`

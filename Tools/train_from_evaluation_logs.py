@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import csv
 import argparse
 import subprocess
 import sys
@@ -8,6 +9,7 @@ from pathlib import Path
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_LOG_DIR = Path.home() / "AppData" / "LocalLow" / "DefaultCompany" / "My project"
 DEFAULT_LABEL_OUTPUT = DEFAULT_LOG_DIR / "peripheral_batch_cue_labels.csv"
+DEFAULT_FALLBACK_DATASET = Path("cue_training_dataset.csv")
 DEFAULT_MODEL_PATH = Path("Assets") / "Models" / "cue_model_unity.json"
 DEFAULT_PREDICTIONS_PATH = Path("cue_training_predictions_evaluation.csv")
 
@@ -15,6 +17,17 @@ DEFAULT_PREDICTIONS_PATH = Path("cue_training_predictions_evaluation.csv")
 def run_command(command, cwd):
     print("Running:", " ".join(str(part) for part in command))
     subprocess.run(command, cwd=str(cwd), check=True)
+
+
+def data_row_count(path):
+    if not path.exists():
+        return 0
+
+    with path.open("r", encoding="utf-8-sig", newline="") as file:
+        reader = csv.reader(file)
+        row_count = sum(1 for _ in reader)
+
+    return max(0, row_count - 1)
 
 
 def main():
@@ -89,11 +102,28 @@ def main():
     ]
     run_command(analyze_command, repo_root)
 
+    dataset_path = label_output
+    if data_row_count(dataset_path) == 0:
+        fallback_dataset = repo_root / DEFAULT_FALLBACK_DATASET
+        if not fallback_dataset.exists():
+            generate_command = [
+                sys.executable,
+                str(repo_root / "Tools" / "generate_simulation_dataset.py"),
+                "--mode",
+                "grid",
+                "--output",
+                str(fallback_dataset),
+            ]
+            run_command(generate_command, repo_root)
+
+        dataset_path = fallback_dataset
+        print(f"Label dataset was empty; falling back to simulation dataset: {dataset_path}")
+
     train_command = [
         sys.executable,
         str(repo_root / "Tools" / "train_cue_model.py"),
         "--dataset",
-        str(label_output),
+        str(dataset_path),
         "--model",
         str(model_path),
         "--predictions",
@@ -118,6 +148,7 @@ def main():
     run_command(train_command, repo_root)
 
     print(f"Label dataset: {label_output}")
+    print(f"Training dataset: {dataset_path}")
     print(f"Model: {model_path}")
     print(f"Predictions: {predictions_path}")
 
