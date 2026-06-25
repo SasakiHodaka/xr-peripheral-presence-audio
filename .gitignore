@@ -27,7 +27,7 @@ UpgradeLog.htm
 *.VC.db
 sysinfo.txt
 
-# Visual Studio / Rider / VS Code
+# Editor files
 .vs/
 .idea/
 .vscode/
@@ -38,17 +38,8 @@ sysinfo.txt
 Thumbs.db
 desktop.ini
 
-# Unity crash / profiler artifacts
-*.stackdump
-*.traceevents
-
-# Local experiment outputs
+# Logs and local analysis output
 *.log
 __pycache__/
-peripheral_state_log.csv
-presence_training_data_runtime.csv
-cue_training_dataset.csv
-cue_training_predictions.csv
-cue_training_dataset_*.csv
-cue_training_predictions_*.csv
+*.pyc
 /Models/
