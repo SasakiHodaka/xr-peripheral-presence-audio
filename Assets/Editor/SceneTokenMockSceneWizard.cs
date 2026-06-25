@@ -41,6 +41,7 @@ public static class SceneTokenMockSceneWizard
         var renderer = managerObject.AddComponent<SceneTokenDecoderRenderer>();
         var conditionController = managerObject.AddComponent<SceneTokenConditionController>();
         var experimentSession = managerObject.AddComponent<SceneTokenExperimentSession>();
+        var scriptedConversation = managerObject.AddComponent<SceneTokenScriptedConversation>();
         var manager = managerObject.AddComponent<SceneTokenManager>();
 
         var speakers = new[] { speakerA, speakerB, speakerC };
@@ -59,12 +60,19 @@ public static class SceneTokenMockSceneWizard
         experimentSession.conditionDurationSeconds = 30f;
         experimentSession.autoAdvanceCondition = true;
 
+        scriptedConversation.speakers = speakers;
+        scriptedConversation.experimentSession = experimentSession;
+        scriptedConversation.eventLogger = eventLogger;
+        scriptedConversation.autoStartWithExperimentSession = true;
+        scriptedConversation.loopScript = true;
+
         manager.listener = camera.transform;
         manager.speakers = speakers;
         manager.logger = logger;
         manager.decoderRenderer = renderer;
         manager.metrics = metrics;
         manager.experimentSession = experimentSession;
+        manager.scriptedConversation = scriptedConversation;
         manager.tokenUpdateInterval = 0.1f;
         manager.showDebugHud = true;
 

@@ -12,7 +12,7 @@
 
 1. Add a small in-scene panel for participant ID and session ID.
 2. Add explicit trial completion feedback to the HUD.
-3. Add a deterministic scripted conversation sequence for repeatable runs.
+3. Tune the deterministic scripted conversation sequence after the first logged run.
 4. Add optional recorded voice clips in `Assets/Audio`.
 5. Add a CSV parser or notebook for token-level behavioral analysis.
 

@@ -12,6 +12,7 @@ namespace SceneTokens
         public SceneTokenDecoderRenderer decoderRenderer;
         public SceneTokenMetrics metrics;
         public SceneTokenExperimentSession experimentSession;
+        public SceneTokenScriptedConversation scriptedConversation;
         public bool logTokens = true;
         public bool showDebugHud = true;
 
@@ -31,6 +32,7 @@ namespace SceneTokens
             decoderRenderer = GetComponent<SceneTokenDecoderRenderer>();
             metrics = GetComponent<SceneTokenMetrics>();
             experimentSession = GetComponent<SceneTokenExperimentSession>();
+            scriptedConversation = GetComponent<SceneTokenScriptedConversation>();
         }
 
         private void Awake()
@@ -58,6 +60,11 @@ namespace SceneTokens
             if (experimentSession == null)
             {
                 experimentSession = GetComponent<SceneTokenExperimentSession>();
+            }
+
+            if (scriptedConversation == null)
+            {
+                scriptedConversation = GetComponent<SceneTokenScriptedConversation>();
             }
         }
 
@@ -95,6 +102,11 @@ namespace SceneTokens
             if (experimentSession != null)
             {
                 GUILayout.Label(experimentSession.Summary);
+            }
+
+            if (scriptedConversation != null)
+            {
+                GUILayout.Label(scriptedConversation.Summary);
             }
 
             for (var i = 0; i < latestTokens.Count; i++)

@@ -34,12 +34,22 @@ namespace SceneTokens
             get { return isRunning; }
         }
 
+        public int TrialIndex
+        {
+            get { return trialIndex; }
+        }
+
+        public float TrialElapsedSeconds
+        {
+            get { return trialIndex > 0 ? Time.time - trialStartTime : 0f; }
+        }
+
         public string Summary
         {
             get
             {
                 var condition = GetCurrentCondition();
-                var elapsed = isRunning ? Time.time - trialStartTime : 0f;
+                var elapsed = isRunning ? TrialElapsedSeconds : 0f;
                 return string.Format(
                     "session={0} participant={1} trial={2} condition={3} running={4} t={5:F1}/{6:F1}",
                     string.IsNullOrEmpty(sessionId) ? "(not set)" : sessionId,
@@ -248,7 +258,7 @@ namespace SceneTokens
                 trialIndex,
                 GetCurrentCondition(),
                 reason,
-                trialIndex > 0 ? Time.time - trialStartTime : 0f);
+                TrialElapsedSeconds);
         }
 
         private void WriteEvent(string eventType, string value)

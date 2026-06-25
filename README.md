@@ -17,6 +17,8 @@ repository. The current research target is spatial conversation tokenization:
 6. Use `1`-`5` to switch evaluation conditions.
 7. Use `Space` to start or stop an experiment session.
 8. Use `N` to advance to the next condition, or wait for the timer.
+9. Use `T` to start or stop the scripted conversation sequence.
+10. Use `Y` to stop the scripted conversation sequence.
 
 ## Current Prototype
 
@@ -30,6 +32,7 @@ The mock scene currently supports:
 - visible avatar state labels
 - CSV token logging
 - event logging for experiment sessions
+- deterministic scripted conversation playback
 - communication volume metrics
 - token-based AudioSource position, volume, and pitch reconstruction
 - generated fallback tone when no recorded speaking clip is assigned

@@ -10,6 +10,7 @@ SpeakerObject
   -> SceneTokenDecoderRenderer
   -> SceneTokenMetrics
   -> SceneTokenExperimentSession
+  -> SceneTokenScriptedConversation
 ```
 
 ## Core Runtime Scripts
@@ -61,6 +62,12 @@ SpeakerObject
 - Owns experiment session state.
 - Tracks condition order, trial index, session ID, participant ID, and elapsed time.
 - Supports timed or manual condition advancement.
+
+`SceneTokenScriptedConversation`
+
+- Runs a deterministic speaker and semantic-token sequence.
+- Can start automatically with an experiment session.
+- Supports manual start and stop controls for repeatable mock trials.
 
 `SpeakerDebugLabel`
 

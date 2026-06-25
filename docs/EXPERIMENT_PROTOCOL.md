@@ -41,20 +41,27 @@ Experiment session:
 - `N`: advance to next condition
 - `R`: restart session from the first condition
 
+Scripted conversation:
+
+- `T`: start or stop the deterministic conversation script
+- `Y`: stop the deterministic conversation script
+- The script starts automatically with an experiment session by default.
+
 ## Recommended Trial Flow
 
 1. Open the scene.
 2. Press Play.
 3. Confirm the `Scene Tokens` HUD is visible.
 4. Press `Space` to start the session.
-5. For each condition, produce a short conversation pattern:
+5. Let the scripted conversation run, or press `T` to start it manually.
+6. Confirm that the sequence includes:
    - one active speaker
    - a question or answer semantic token
    - a short overlap using two speakers
    - one warning or instruction token
-6. Let timed condition advance occur, or press `N`.
-7. Stop after the final condition or press `Space`.
-8. Collect CSV logs from `Application.persistentDataPath`.
+7. Let timed condition advance occur, or press `N`.
+8. Stop after the final condition or press `Space`.
+9. Collect CSV logs from `Application.persistentDataPath`.
 
 ## Logs
 
@@ -104,6 +111,7 @@ Before treating a run as valid, confirm:
 
 - all five conditions appear in the metrics CSV
 - event log includes `session_start`, `trial_start`, and `trial_stop`
+- event log includes `script_start`
 - token log contains at least one `SPEAKING` row
 - token log contains at least one non-`NONE` semantic token
 - HUD condition matches the intended key or timed condition
