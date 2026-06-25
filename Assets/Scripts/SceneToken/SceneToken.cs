@@ -15,6 +15,10 @@ namespace SceneTokens
         public string utteranceText;
         public float semanticConfidence;
         public string condition;
+        public string participantId;
+        public string sessionId;
+        public int trialIndex;
+        public float trialElapsed;
         public float azimuth;
         public float range;
         public float timestamp;
@@ -22,8 +26,12 @@ namespace SceneTokens
         public string ToCsvRow()
         {
             return string.Format(
-                "{0:F3},{1},{2:F2},{3:F2},{4},{5},{6},{7},{8},{9},{10:F2},{11}",
+                "{0:F3},{1},{2},{3},{4:F3},{5},{6:F2},{7:F2},{8},{9},{10},{11},{12},{13},{14:F2},{15}",
                 timestamp,
+                EscapeCsv(sessionId),
+                EscapeCsv(participantId),
+                trialIndex,
+                trialElapsed,
                 EscapeCsv(speakerId),
                 azimuth,
                 range,

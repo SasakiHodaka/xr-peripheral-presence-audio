@@ -14,6 +14,7 @@ namespace SceneTokens
         public SceneTokenExperimentSession experimentSession;
         public SceneTokenScriptedConversation scriptedConversation;
         public bool logTokens = true;
+        public bool logOnlyDuringExperimentSession = true;
         public bool showDebugHud = true;
 
         private readonly List<SceneToken> latestTokens = new List<SceneToken>();
@@ -66,6 +67,8 @@ namespace SceneTokens
             {
                 scriptedConversation = GetComponent<SceneTokenScriptedConversation>();
             }
+
+            EnsureAudioListener();
         }
 
         private void Update()
@@ -86,7 +89,7 @@ namespace SceneTokens
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(16f, 16f, 560f, 320f), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(16f, 16f, 620f, 420f), GUI.skin.box);
             GUILayout.Label("Scene Tokens");
 
             if (decoderRenderer != null)
@@ -102,6 +105,42 @@ namespace SceneTokens
             if (experimentSession != null)
             {
                 GUILayout.Label(experimentSession.Summary);
+
+                if (logOnlyDuringExperimentSession && !experimentSession.IsRunning)
+                {
+                    GUILayout.Label("Logging paused until the experiment session starts.");
+                }
+
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Participant", GUILayout.Width(80f));
+                experimentSession.participantId = GUILayout.TextField(experimentSession.participantId, GUILayout.Width(90f));
+                GUILayout.Label("Session", GUILayout.Width(55f));
+                experimentSession.sessionId = GUILayout.TextField(experimentSession.sessionId, GUILayout.Width(140f));
+                GUILayout.EndHorizontal();
+
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button(experimentSession.IsRunning ? "Stop Session" : "Start Session", GUILayout.Width(120f)))
+                {
+                    if (experimentSession.IsRunning)
+                    {
+                        experimentSession.StopSession("hud_stop");
+                    }
+                    else
+                    {
+                        experimentSession.StartSession();
+                    }
+                }
+
+                if (GUILayout.Button("Next Condition", GUILayout.Width(120f)))
+                {
+                    experimentSession.AdvanceCondition("hud_next");
+                }
+
+                if (GUILayout.Button("Restart", GUILayout.Width(80f)))
+                {
+                    experimentSession.RestartSession();
+                }
+                GUILayout.EndHorizontal();
             }
 
             if (scriptedConversation != null)
@@ -154,7 +193,7 @@ namespace SceneTokens
                 var token = CreateToken(speaker, speakingCount);
                 latestTokens.Add(token);
 
-                if (logTokens && logger != null)
+                if (ShouldWriteExperimentData() && logTokens && logger != null)
                 {
                     logger.Write(token);
                 }
@@ -165,10 +204,35 @@ namespace SceneTokens
                 decoderRenderer.Render(latestTokens);
             }
 
-            if (metrics != null)
+            if (ShouldWriteExperimentData() && metrics != null)
             {
                 metrics.Observe(latestTokens);
             }
+        }
+
+        private bool ShouldWriteExperimentData()
+        {
+            if (!logOnlyDuringExperimentSession || experimentSession == null)
+            {
+                return true;
+            }
+
+            return experimentSession.IsRunning;
+        }
+
+        private void EnsureAudioListener()
+        {
+            if (listener == null)
+            {
+                return;
+            }
+
+            if (FindObjectOfType<AudioListener>() == null)
+            {
+                listener.gameObject.AddComponent<AudioListener>();
+            }
+
+            AudioListener.volume = 1f;
         }
 
         private int CountSpeakingSpeakers()
@@ -207,6 +271,10 @@ namespace SceneTokens
                 utteranceText = isSpeaking ? speaker.utteranceText : string.Empty,
                 semanticConfidence = isSpeaking ? speaker.semanticConfidence : 0f,
                 condition = decoderRenderer != null ? decoderRenderer.renderCondition.ToString() : string.Empty,
+                participantId = experimentSession != null ? experimentSession.participantId : string.Empty,
+                sessionId = experimentSession != null ? experimentSession.sessionId : string.Empty,
+                trialIndex = experimentSession != null ? experimentSession.TrialIndex : 0,
+                trialElapsed = experimentSession != null ? experimentSession.TrialElapsedSeconds : 0f,
                 timestamp = Time.time
             };
         }

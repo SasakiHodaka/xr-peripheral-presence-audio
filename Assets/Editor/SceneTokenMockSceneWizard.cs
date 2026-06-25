@@ -27,6 +27,7 @@ public static class SceneTokenMockSceneWizard
         var camera = new GameObject("Listener Camera");
         camera.tag = "MainCamera";
         camera.AddComponent<Camera>();
+        camera.AddComponent<AudioListener>();
         camera.transform.position = new Vector3(0f, 1.6f, -2.4f);
         camera.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
 
@@ -42,6 +43,7 @@ public static class SceneTokenMockSceneWizard
         var conditionController = managerObject.AddComponent<SceneTokenConditionController>();
         var experimentSession = managerObject.AddComponent<SceneTokenExperimentSession>();
         var scriptedConversation = managerObject.AddComponent<SceneTokenScriptedConversation>();
+        var responseRecorder = managerObject.AddComponent<SceneTokenResponseRecorder>();
         var manager = managerObject.AddComponent<SceneTokenManager>();
 
         var speakers = new[] { speakerA, speakerB, speakerC };
@@ -51,6 +53,7 @@ public static class SceneTokenMockSceneWizard
         renderer.renderCondition = SceneTokenRenderCondition.FULL_SCENE_TOKEN;
 
         metrics.decoderRenderer = renderer;
+        metrics.experimentSession = experimentSession;
         conditionController.decoderRenderer = renderer;
         conditionController.eventLogger = eventLogger;
 
@@ -74,7 +77,16 @@ public static class SceneTokenMockSceneWizard
         manager.experimentSession = experimentSession;
         manager.scriptedConversation = scriptedConversation;
         manager.tokenUpdateInterval = 0.1f;
+        manager.logOnlyDuringExperimentSession = true;
         manager.showDebugHud = true;
+
+        responseRecorder.tokenManager = manager;
+        responseRecorder.experimentSession = experimentSession;
+        responseRecorder.decoderRenderer = renderer;
+        responseRecorder.eventLogger = eventLogger;
+        responseRecorder.speakers = speakers;
+        responseRecorder.recordOnlyDuringExperimentSession = true;
+        responseRecorder.showResponseHud = true;
 
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/Scenes/SceneTokenMock.unity");
         Selection.activeGameObject = managerObject;

@@ -10,6 +10,7 @@ namespace SceneTokens
         public string fileNamePrefix = "scene_token_metrics";
         public float summaryWindowSeconds = 1f;
         public SceneTokenDecoderRenderer decoderRenderer;
+        public SceneTokenExperimentSession experimentSession;
 
         private int windowTokenCount;
         private int windowJsonBytes;
@@ -45,9 +46,14 @@ namespace SceneTokens
                 decoderRenderer = GetComponent<SceneTokenDecoderRenderer>();
             }
 
+            if (experimentSession == null)
+            {
+                experimentSession = GetComponent<SceneTokenExperimentSession>();
+            }
+
             var timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
             filePath = Path.Combine(Application.persistentDataPath, fileNamePrefix + "_" + timestamp + ".csv");
-            File.WriteAllText(filePath, "timestamp,condition,tokensPerSecond,jsonBytesPerSecond,compactBytesPerSecond,objectMetadataBytesPerSecond,compactSavingsRatio\n");
+            File.WriteAllText(filePath, "timestamp,sessionId,participantId,trialIndex,trialElapsed,condition,tokensPerSecond,jsonBytesPerSecond,compactBytesPerSecond,objectMetadataBytesPerSecond,compactSavingsRatio\n");
             windowStartTime = Time.unscaledTime;
         }
 
@@ -136,9 +142,17 @@ namespace SceneTokens
             }
 
             var condition = decoderRenderer != null ? decoderRenderer.renderCondition.ToString() : string.Empty;
+            var sessionId = experimentSession != null ? experimentSession.sessionId : string.Empty;
+            var participantId = experimentSession != null ? experimentSession.participantId : string.Empty;
+            var trialIndex = experimentSession != null ? experimentSession.TrialIndex : 0;
+            var trialElapsed = experimentSession != null ? experimentSession.TrialElapsedSeconds : 0f;
             var row = string.Format(
-                "{0:F3},{1},{2:F2},{3:F2},{4:F2},{5:F2},{6:F4}\n",
+                "{0:F3},{1},{2},{3},{4:F3},{5},{6:F2},{7:F2},{8:F2},{9:F2},{10:F4}\n",
                 Time.time,
+                EscapeCsv(sessionId),
+                EscapeCsv(participantId),
+                trialIndex,
+                trialElapsed,
                 condition,
                 TokensPerSecond,
                 JsonBytesPerSecond,
@@ -146,6 +160,21 @@ namespace SceneTokens
                 ObjectMetadataBytesPerSecond,
                 CompactSavingsRatio);
             File.AppendAllText(filePath, row);
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            if (value.IndexOfAny(new[] { ',', '"', '\n', '\r' }) < 0)
+            {
+                return value;
+            }
+
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
         }
     }
 }

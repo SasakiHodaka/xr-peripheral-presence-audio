@@ -25,7 +25,7 @@ namespace SceneTokens
 
             if (writeHeaderOnStart)
             {
-                File.WriteAllText(filePath, "timestamp,speakerId,azimuth,range,direction,distance,speakingState,turnState,semanticToken,utteranceText,semanticConfidence,condition\n");
+                File.WriteAllText(filePath, "timestamp,sessionId,participantId,trialIndex,trialElapsed,speakerId,azimuth,range,direction,distance,speakingState,turnState,semanticToken,utteranceText,semanticConfidence,condition\n");
             }
         }
 
