@@ -1,51 +1,59 @@
 # SemanticSpatialAudio
 
-Unity 2022.3 LTS / 3D Built-in Render Pipeline project for the semantic spatial audio research prototype.
+Unity 2022.3 LTS project for a semantic spatial audio research prototype.
 
-## Research Scope
-
-This project is separated from the older peripheral presence audio work.
-The goal here is spatial conversation tokenization:
+The older peripheral presence audio prototype has been replaced in this
+repository. The current research target is spatial conversation tokenization:
 
 `Speech Object + Position + Meaning/Turn State -> Scene Token -> Spatial Audio Rendering`
 
-## Folder Layout
+## Quick Start
 
-- `Assets/Scripts/Core`: shared project logic
-- `Assets/Scripts/SceneToken`: token model, generator, logger, decoder
-- `Assets/Scripts/Audio`: audio-specific components
-- `Assets/Scripts/UI`: debug and experiment UI
-- `Assets/Scenes`: Unity scenes
-- `Assets/Data`: CSV logs, sample metadata, analysis data
-- `Assets/Audio`: voice clips
-- `Assets/Prefabs`: avatars and reusable objects
-
-## First Demo
-
-1. Open this folder with Unity 2022.3.62f3 or another 2022.3 LTS editor.
+1. Open this repository with Unity 2022.3.62f3 or another Unity 2022.3 LTS editor.
 2. Open `Assets/Scenes/SceneTokenMock.unity`.
 3. Press Play.
-4. Press `A`, `B`, or `C` to toggle each avatar's speaking state.
-5. Press `Q`, `W`, or `E` to cycle each avatar's semantic token.
-6. Press `1`-`5` to switch evaluation conditions.
-7. Press `Space` to start/stop an experiment session.
-8. Press `N` to advance to the next condition, or wait for the timer.
-9. Check the `Scene Tokens` debug HUD.
+4. Use `A`, `B`, or `C` to toggle each avatar's speaking state.
+5. Use `Q`, `W`, or `E` to cycle each avatar's semantic token.
+6. Use `1`-`5` to switch evaluation conditions.
+7. Use `Space` to start or stop an experiment session.
+8. Use `N` to advance to the next condition, or wait for the timer.
 
-The current prototype generates:
+## Current Prototype
 
-- 8-direction token
-- 3-level distance token
+The mock scene currently supports:
+
+- 8-direction scene tokens
+- 3-level distance tokens
 - speaking state
 - simple turn state
-- manual semantic token
-- CSV log
-- communication volume metrics
+- manual semantic labels
 - visible avatar state labels
-- token-based AudioSource position and volume reconstruction
-- experiment session events with condition order and trial timing
+- CSV token logging
+- event logging for experiment sessions
+- communication volume metrics
+- token-based AudioSource position, volume, and pitch reconstruction
+- generated fallback tone when no recorded speaking clip is assigned
 
-If `SpeakerObject.speakingClip` is empty, the component generates a simple looping tone so spatial playback can be tested without recorded voice files.
+## Documentation
+
+- `docs/PROJECT_STATUS.md`: current state, validation result, known issues
+- `docs/EXPERIMENT_PROTOCOL.md`: how to run a trial and collect logs
+- `docs/ARCHITECTURE.md`: script responsibilities and data flow
+- `docs/NEXT_STEPS.md`: recommended next development tasks
+- `Assets/Scripts/SceneToken/README_SceneTokens.md`: implementation-level notes
+
+## Repository Layout
+
+- `Assets/Editor`: Unity editor tooling and scene wizard
+- `Assets/Scenes`: Unity scenes
+- `Assets/Scripts/SceneToken`: token model, manager, logger, decoder, metrics
+- `Assets/Scripts/UI`: debug labels and UI helpers
+- `Assets/Audio`: optional voice clips
+- `Assets/Data`: sample metadata and analysis data
+- `Assets/Prefabs`: reusable scene objects
+- `Packages`: Unity package manifest and lock file
+- `ProjectSettings`: Unity project settings
+- `Tools`: analysis scripts
 
 ## Log Analysis
 
