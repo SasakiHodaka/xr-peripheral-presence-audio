@@ -1,236 +1,212 @@
-# Semantic Spatial Audio / Scene Token VR
+# XR Peripheral Presence Audio Research
 
-This repository contains a Unity research prototype for semantic spatial voice
-communication in VR.
+Unity prototype and research notes for adaptive peripheral presence audio in VR/XR.
 
-研究テーマ:
+The project starts from a practical Unity system that detects off-screen or peripheral people and maps those states to interpretable audio cues. The longer-term research direction is to replace subjective cue labels with labels built from simulation and evaluation: generate many virtual human-presence situations, test candidate cues, convert the best-performing cue into a training label, and train a cue-control model from that dataset.
 
-```text
-VR空間におけるScene Tokenを用いた意味的空間音声コミュニケーション手法の提案
-```
+## Current Research Position
 
-## Research Summary
+The current implementation proves that the Unity logging and cue-control learning pipeline can run. It does not yet prove that the generated cue labels are generally correct for users.
 
-Existing immersive voice communication technologies such as IVAS, MASA, and
-object-based audio mainly focus on how to transmit and render spatial audio:
+Current status:
 
-```text
-Speech + Position / Direction -> Spatial Audio Rendering
-```
+- Unity can detect peripheral human-presence states and log cue parameters.
+- A first training dataset can be generated from objective simulation parameters on the PC.
+- Unity logs can still be used for prototype and human-feedback datasets.
+- A lightweight cue-control model can predict `cueType`, `presenceScore`, and playback parameters.
+- The current simulation labels are reproducible baseline labels. Human feedback is used later for calibration and validation.
+- The next research step is to build evaluation-derived labels from generated situations and candidate cue performance.
+- Evaluation logs can also be converted with `Tools/analyze_peripheral_csv.py --label-dataset --objective-only` so the first label pass depends only on detection, direction, and reaction time.
+- All source logs in a directory can be combined with `Tools/analyze_peripheral_csv.py --batch-label-dataset --objective-only`.
+- The full evaluation-to-training pipeline can be run with `Tools/train_from_evaluation_logs.py`.
+- If the current logs do not contain cue-candidate records yet, that script falls back to the existing simulation dataset so training still completes.
 
-This project extends that idea by adding conversation-state information:
-
-```text
-Speech Object + Position + Conversation State -> Scene Token -> Spatial Audio Rendering
-```
-
-The goal is not only to reproduce where a voice is heard from, but also to help
-the listener understand:
-
-- who is speaking
-- where the speaker is located
-- whether the speaker is currently holding the conversational turn
-- what kind of utterance is being made, such as a question, answer, instruction, or warning
-
-In short:
+Important boundary:
 
 ```text
-MASA / IVAS: How should the sound be reproduced?
-Scene Token: What is happening in the communication scene?
+Current dataset:
+developer/rule-based prototype labels
+
+Target dataset:
+simulation-generated situations
+-> multiple cue candidates
+-> evaluation by localization, reaction time, clarity, naturalness, and discomfort
+-> final cue labels
 ```
 
 ## Current Prototype
 
-The current Unity mock scene implements a three-speaker VR conversation demo.
+The current Unity prototype detects peripheral target states and predicts lightweight cue parameters.
 
-It supports:
+Implemented components:
 
-- three avatar speakers
-- 8-direction scene tokens
-- 3-level distance tokens
-- speaking-state tokens
-- simple turn-state tokens
-- manual or scripted semantic labels
-- token-based AudioSource position, volume, and pitch reconstruction
-- deterministic scripted conversation playback
-- CSV token logging
-- event logging for experiment sessions
-- participant response logging and correctness scoring for direction and speaker guesses
-- response latency logging for objective identification-time analysis
-- communication-volume metrics
+- `PeripheralStateDetector`: detects target state flags such as `OutOfView`, `Approaching`, `Speaking`, `Gazing`, `Near`, and `Crossing`.
+- `EnvironmentAcousticProfile`: stores compact room/acoustic parameters that can later be predicted by an AI estimator.
+- `PeripheralCueModel`: predicts `cueType`, `presenceScore`, and `volumeGain` from each detection result.
+- `PeripheralCueAudioEmitter`: plays predicted cue types as target-attached 3D audio.
+- `PeripheralStateLogger`: writes target state and cue predictions to CSV.
+- `PeripheralDebugUI`: shows target state and cue predictions in Play Mode.
+- `PeripheralTrialController`: controls pre-trial and trial timing.
+- `PeripheralTrialConditionController`: switches demo conditions such as approach, back approach, crossing, speaking, and none.
+- `PeripheralAuiLogCollectionController`: cycles target scenarios, cue conditions, and environment presets for AUI training logs.
+- `PeripheralSimulationDatasetGenerator`: generates objective simulation-label CSV data from Unity.
+- `PeripheralCueModel.comparisonCondition`: switches `NoCue`, `FixedCue`, `StateBasedCue`, and `EnvironmentAdaptiveCue` cue-control modes.
 
-Current token example:
+PC-only simulation and training:
 
-```json
-{
-  "speakerId": "A",
-  "direction": "FRONT_RIGHT",
-  "distance": "NEAR",
-  "speakingState": "SPEAKING",
-  "turnState": "TURN_HOLDER",
-  "semanticToken": "QUESTION",
-  "timestamp": 12.50
-}
+```powershell
+python Tools/generate_simulation_dataset.py --mode grid --output cue_training_dataset.csv
+python Tools/train_cue_model.py --dataset cue_training_dataset.csv --classifier linear --classifier-epochs 220 --epochs 80
 ```
 
-## Why Scene Token?
+This writes `Assets/Models/cue_model_unity.json`, which can be assigned to `PeripheralCueModel.learnedModelJson` and used with `LearnedCue`.
 
-Spatial audio alone can tell users where a sound is coming from. However, in a
-multi-speaker VR meeting, users may still have difficulty understanding who is
-speaking, who is responding, whether speakers are overlapping, or whether an
-utterance is a warning or instruction.
+Current cue flow:
 
-Scene Token is proposed as a discrete representation that integrates:
+```text
+target state + distance + speed
+-> cueType, presenceScore, volumeGain, lowPassHz, reverbAmount, occlusionGain
+-> 3D audio playback + CSV + debug UI
+```
 
-- spatial information: direction and distance
-- conversation information: speaking state and turn state
-- semantic information: utterance labels such as question, answer, instruction, and warning
+Next Unity target:
 
-This makes the research target semantic spatial audio communication rather than
-only spatial audio reproduction.
+```text
+target state + distance + speed + evaluated cue-label model
+-> cueType, presenceScore, volumeGain
+-> 3D audio playback + CSV + participant/evaluation logs
+```
 
-## Related Work Position
+## Research Structure
 
-This repository is organized around the following research gap:
+The method is organized into three layers.
 
-| Area | Main contribution | Limitation for this project |
-| --- | --- | --- |
-| IVAS | Immersive voice/audio coding standard | Focuses on codec and spatial audio transmission |
-| MASA | Metadata-assisted spatial audio | Represents spatial rendering metadata, not conversation meaning |
-| Object-Based Audio | Treats each speaker as an audio object | Preserves speaker object and position, but not turn role or utterance meaning |
-| Turn Taking | Models speaker/listener roles | Usually does not integrate spatial audio rendering |
-| Semantic Communication | Transmits meaning rather than raw signal | Usually not specialized for VR spatial voice scenes |
-| Scene Token | Integrates spatial state and conversation state | Proposed and evaluated in this project |
+### 1. Situation Simulation and Cue-Label Generation
 
-## Evaluation Conditions
+Goal: generate many virtual situations and convert cue evaluation results into training labels.
 
-The prototype compares five rendering conditions:
+Core flow:
 
-1. `TRADITIONAL`
-   - Uses original object positions.
-2. `DIRECTION_ONLY`
-   - Uses quantized direction only.
-3. `DIRECTION_DISTANCE`
-   - Uses quantized direction and distance.
-4. `DIRECTION_DISTANCE_SPEAKING`
-   - Adds speaking-state gating.
-5. `FULL_SCENE_TOKEN`
-   - Adds turn-state and semantic-token modulation.
+```text
+distance + direction + approach speed + speaking + crossing + view state
+-> candidate cues such as footstep, voice, ambient presence, clothing rustle, breathing, or none
+-> evaluation by localization accuracy, reaction time, clarity, naturalness, and discomfort
+-> cueType, presenceScore, and volumeGain labels
+```
 
-Planned evaluation metrics:
+This is the main answer to the data-reliability problem. The current dataset is useful as an initial subjective prototype, but it should not be treated as the final ground truth. Final cue labels should come from simulation plus evaluation, not only from the developer's preference.
 
-- speaker localization accuracy
-- speaker identification time
-- conversation understanding
-- overlap/turn tracking accuracy
-- NASA-TLX or other workload measures
-- communication-volume comparison between object metadata and compact scene tokens
+### 2. Audio-Visual Simulation and Acoustic References
 
-## Quick Start
+Goal: use simulation-based audio research as the data-generation model, while keeping the target label problem clear.
 
-1. Open this repository with Unity 2022.3.62f3 or another Unity 2022.3 LTS editor.
-2. Open `Assets/Scenes/SceneTokenMock.unity`.
-3. Press Play.
-4. Use `A`, `B`, or `C` to toggle each avatar's speaking state.
-5. Use `Q`, `W`, or `E` to cycle each avatar's semantic token.
-6. Use `1`-`5` to switch evaluation conditions.
-7. Use `Space` to start or stop an experiment session.
-8. Use `N` to advance to the next condition, or wait for the timer.
-9. Use `T` to start or stop the scripted conversation sequence.
-10. Use `Y` to stop the scripted conversation sequence.
-11. Use numpad `7/8/9/4/6/1/2/3` for direction responses.
-12. Use `F1/F2/F3` for speaker responses.
+Main references:
+
+- Meta Audio Simulator
+- SoundSpaces
+- SoundSpaces 2.0
+- Learning Neural Acoustic Fields
+- self-supervised learning
+
+Useful ideas:
+
+- Generate many samples from virtual environments instead of manually labeling every sample.
+- Randomly place sources, listeners, and moving targets in 3D spaces.
+- Save state parameters, audio candidates, source/listener positions, and environment metadata.
+- Use self-supervised or simulation-supervised learning where the label is physically computable.
+
+Important boundary:
+
+```text
+SoundSpaces-style work can use simulated RIR as the ground truth because acoustics are physically computable.
+This project cannot get the correct cueType from physics alone because cue usefulness depends on human perception.
+Therefore, cue labels require human evaluation or an explicit evaluation model.
+```
+
+### 3. Unity Implementation Connection
+
+Goal: use the learned or rule-based cue-control output in a real-time XR prototype.
+
+Unity-side flow:
+
+```text
+PeripheralStateDetector
+-> PeripheralCueModel or learned cue-control model
+-> PeripheralCueAudioEmitter
+-> CSV/debug/evaluation
+```
+
+Environment acoustics estimation remains a later extension. A compact `EnvironmentAcousticProfile` can condition cue playback after the cue-label dataset and evaluation pipeline are stable.
+
+Audio2Face is treated as an optional extension for the `Speaking` condition, where voice, lip motion, facial expression, and presence cues may be synchronized. It is not the main cue-label generation method.
+
+## Planned Data and Learning Pipeline
+
+```text
+1. Generate many Unity situations:
+   distance, direction, approach speed, speaking, crossing, and view state.
+2. Prepare several cue candidates for each situation:
+   footstep, voice, ambient presence, clothing rustle, breathing, and none.
+3. Evaluate cue candidates:
+   localization accuracy, detection/reaction time, approach recognition, clarity, naturalness, and discomfort.
+4. Build final labels:
+   best cueType, presenceScore, and volumeGain.
+5. Train a neural or tabular cue-control model:
+   state parameters -> cueType + presenceScore + volumeGain.
+6. Test on unseen situations and in Unity play-mode trials.
+```
+
+## Development Roadmap
+
+1. Stabilize the current state detection and cue prediction layer.
+2. Stabilize `PeripheralCueAudioEmitter` clip mapping and playback timing in trial scenes.
+3. Define the simulation condition grid for distance, direction, approach speed, speaking, crossing, and view state.
+4. Add candidate cue playback for footstep, voice, ambient presence, clothing rustle, breathing, and none.
+5. Collect the first subjective prototype dataset and clearly mark it as non-final.
+6. Run evaluation trials to measure localization accuracy, reaction time, clarity, naturalness, and discomfort.
+7. Convert evaluation results into cue labels and presence/volume scores.
+8. Train a cue-control model from the evaluated dataset.
+9. Compare rule-based, subjective-label, and evaluation-label models.
+10. Add environment-acoustic conditioning after the cue-label pipeline is reliable.
 
 ## Documentation
 
-Start here:
+Primary research documents:
 
-- `docs/README.md`: documentation index and recommended reading order
-
-Research documents:
-
-- `docs/RESEARCH_OVERVIEW.md`: research background, problem, purpose, novelty, and evaluation plan
-- `docs/SCENE_TOKEN_SPEC.md`: formal Scene Token definition, fields, generation, and rendering rules
-- `docs/RELATED_WORK_QA.md`: related-work comparison and expected Q&A for presentations
+- `RESEARCH_DESIGN.md`: research question, hypotheses, experiment design, measures, and the cue-label training plan.
+- `RESEARCH_ROADMAP.md`: implementation roadmap from situation simulation to evaluation-derived labels and cue-control learning.
+- `AI_TRAINING_SCHEMA.md`: feature columns, target columns, current prototype dataset, label reliability issue, and next dataset target.
+- `CURRENT_PROGRESS_REPORT.md`: current Japanese summary of the project status, limitation, and next plan.
 
 Implementation documents:
 
-- `docs/PROJECT_STATUS.md`: current state, validation result, and known issues
-- `docs/EXPERIMENT_PROTOCOL.md`: how to run a trial and collect logs
-- `docs/ARCHITECTURE.md`: script responsibilities and data flow
-- `docs/NEXT_STEPS.md`: recommended next development tasks
-- `Assets/Scripts/SceneToken/README_SceneTokens.md`: implementation-level notes
+- `PERIPHERAL_RESEARCH.md`: Unity demo flow, CSV format, trial conditions, and analysis script usage.
+- `ENVIRONMENT.md`: local Unity and tooling setup.
 
-## Repository Layout
+Related work and extension documents:
 
-- `Assets/Editor`: Unity editor tooling and scene wizard
-- `Assets/Scenes`: Unity scenes
-- `Assets/Scripts/SceneToken`: token model, manager, logger, decoder, metrics
-- `Assets/Scripts/UI`: debug labels and UI helpers
-- `Assets/Audio`: optional voice clips
-- `Assets/Data`: sample metadata and analysis data
-- `Assets/Prefabs`: reusable scene objects
-- `Packages`: Unity package manifest and lock file
-- `ProjectSettings`: Unity project settings
-- `Tools`: analysis scripts
+- `LITERATURE_PRIORITIES.md`: prioritized related work across acoustics, SoundSpaces, XR, HRI, CPS, and multimodal learning.
+- `NAF_RESEARCH_PLAN.md`: NAF-inspired interpretation and boundaries for this project.
+- `SECOND_PROJECT_RESEARCH_DESIGN.md`: follow-on project design that bridges XR adaptive feedback to multimodal CPS.
 
-## Log Analysis
+Progress/archive documents:
 
-Metric logs are written to Unity's `Application.persistentDataPath`.
+- `AUI_TRAINING_REPORT.md`: latest cue-control learning pipeline result and next training steps.
+- `PROGRESS_REPORT_AUI.md`: concise progress-report text for the current AUI learning implementation.
+- `AUI_PROGRESS_PRESENTATION_DRAFT.md`: slide-by-slide draft and Q&A for progress reporting.
 
-Run:
+## References
 
-```bash
-python Tools/analyze_scene_token_logs.py <metrics_csv_or_log_directory>
-python Tools/analyze_token_logs.py <scene_tokens_csv_or_log_directory>
-python Tools/analyze_event_logs.py <scene_token_events_csv_or_log_directory>
-python Tools/summarize_experiment_run.py <log_directory> [summary.md]
+- Majumder, S., Chen, C., Al-Halah, Z., & Grauman, K. **Few-Shot Audio-Visual Learning of Environment Acoustics**. NeurIPS 2022. https://proceedings.neurips.cc/paper_files/paper/2022/hash/113ae3a9762ca2168f860a8501d6ae25-Abstract-Conference.html
+- Chen, C., Jain, U., Schissler, C., Gari, S. V. A., Al-Halah, Z., Ithapu, V. K., Robinson, P., & Grauman, K. **SoundSpaces: Audio-Visual Navigation in 3D Environments**. ECCV 2020 / arXiv. https://arxiv.org/abs/1912.11474
+- Chen, C., Schissler, C., Garg, S., Kobernik, P., Clegg, A., Calamia, P., Batra, D., Robinson, P. W., & Grauman, K. **SoundSpaces 2.0: A Simulation Platform for Visual-Acoustic Learning**. NeurIPS 2022 Datasets and Benchmarks. https://arxiv.org/abs/2206.08312
+- Luo, A., Du, Y., Tarr, M. J., Tenenbaum, J. B., Torralba, A., & Sitzmann, V. **Learning Neural Acoustic Fields**. NeurIPS 2022. https://arxiv.org/abs/2204.00628
+- NVIDIA. **Omniverse Audio2Face Documentation**. https://docs.omniverse.nvidia.com/audio2face/latest/overview_external.html
+
+## Compile Check
+
+Use Unity batch mode as the authoritative compile check:
+
+```powershell
+& "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\acd-pc67\xr-peripheral-presence-audio" -logFile "C:\Users\acd-pc67\xr-peripheral-presence-audio\Logs\PeripheralCompileCheck.log"
 ```
-
-The metrics script summarizes:
-
-- tokens per second
-- JSON-like bytes per second
-- compact scene token bytes per second
-- object metadata bytes per second
-- compact savings ratio
-
-The token script summarizes:
-
-- condition-level token rows
-- session, participant, and trial IDs
-- speaking and semantic-token ratios
-- turn-holder and overlap rows
-- observed speakers, directions, distances, turns, and semantic labels
-- basic data quality checks
-
-The event script summarizes:
-
-- session/trial events
-- direction response counts
-- speaker response counts
-- direction and speaker accuracy when a non-ambiguous target exists
-- average direction and speaker response latency
-- response-log quality checks
-
-The summary script generates a Markdown report containing:
-
-- data quality checks
-- token summary
-- response accuracy and latency summary
-- communication metrics
-- a short weekly-report draft
-
-## Research Claim to Keep Clear
-
-The current main claim is:
-
-```text
-Scene Token integrates spatial information and conversation-state information
-into a discrete representation for VR spatial voice communication. Compared
-with spatial metadata alone, it can support not only sound reproduction but also
-conversation understanding.
-```
-
-Communication-volume reduction is treated as a secondary analysis until enough
-experimental evidence is collected.
