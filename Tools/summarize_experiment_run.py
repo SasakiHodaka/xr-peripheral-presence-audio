@@ -151,6 +151,13 @@ def collect_metric_stats(root):
                     "compactBytesPerSecond",
                     "objectMetadataBytesPerSecond",
                     "compactSavingsRatio",
+                    "generatedTokensPerSecond",
+                    "selectedTokensPerSecond",
+                    "selectedJsonBytesPerSecond",
+                    "selectedCompactBytesPerSecond",
+                    "tokenDropRatio",
+                    "importantTokenSendRatio",
+                    "selectionSavingsRatio",
                 ):
                     stats[condition][field].append(safe_float(row.get(field)))
 
@@ -361,6 +368,35 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
                 100.0 * average(item["compactSavingsRatio"]),
             )
         )
+
+    has_selection_metrics = any(
+        average(item["generatedTokensPerSecond"]) > 0 or average(item["selectedTokensPerSecond"]) > 0
+        for item in metric_stats.values()
+    )
+
+    if has_selection_metrics:
+        lines.extend(
+            [
+                "",
+                "## Token Selection Metrics",
+                "",
+                "| Condition | Generated tokens/s | Selected tokens/s | Selected JSON B/s | Token drop | Important send | Selection saving |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for condition in sorted(metric_stats):
+            item = metric_stats[condition]
+            lines.append(
+                "| {0} | {1:.2f} | {2:.2f} | {3:.2f} | {4:.1f}% | {5:.1f}% | {6:.1f}% |".format(
+                    condition,
+                    average(item["generatedTokensPerSecond"]),
+                    average(item["selectedTokensPerSecond"]),
+                    average(item["selectedJsonBytesPerSecond"]),
+                    100.0 * average(item["tokenDropRatio"]),
+                    100.0 * average(item["importantTokenSendRatio"]),
+                    100.0 * average(item["selectionSavingsRatio"]),
+                )
+            )
 
     lines.extend(
         [

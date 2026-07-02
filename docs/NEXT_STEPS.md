@@ -7,7 +7,7 @@ This document lists the next tasks in priority order.
 Goal:
 
 ```text
-Obtain one complete logged run across all five conditions.
+Obtain one complete logged run across the three main conditions.
 ```
 
 Tasks:
@@ -17,11 +17,9 @@ Tasks:
 3. Run `Tools > Semantic Spatial Audio > Validate Scene Token Mock Scene`.
 4. Press Play.
 5. Start an experiment session with `Space`.
-6. Run all five conditions:
+6. Run all three main conditions:
    - `TRADITIONAL`
-   - `DIRECTION_ONLY`
    - `DIRECTION_DISTANCE`
-   - `DIRECTION_DISTANCE_SPEAKING`
    - `FULL_SCENE_TOKEN`
 7. During each condition, enter at least one direction response and one speaker
    response:
@@ -47,7 +45,7 @@ Deliverable:
 - one valid metrics log
 - one valid response/event summary
 - one Markdown experiment summary
-- one short summary of what each condition produced
+- one short summary of what each main condition produced
 
 Current status:
 

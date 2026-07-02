@@ -224,7 +224,10 @@ Purpose:
 
 - Estimates communication volume.
 - Compares compact Scene Token format with object metadata.
-- This is a secondary metric, not the main research claim yet.
+- Measures optional priority-based Scene Token selection when
+  `SceneTokenManager.enableTokenSelection` is enabled.
+- This is a secondary communication evaluation, separate from the main user
+  study conditions.
 
 ### Event Logs
 
@@ -266,6 +269,20 @@ The metrics script summarizes:
 - object metadata bytes per second
 - compact savings ratio
 - selected token throughput and selection savings ratio when token selection is enabled
+
+## Communication-Only Token Selection Check
+
+Token selection is not a separate user-study condition. To evaluate it as a
+communication feature:
+
+1. Use the same scripted conversation.
+2. Run once with `SceneTokenManager.enableTokenSelection = false`.
+3. Run once with `SceneTokenManager.enableTokenSelection = true`.
+4. Compare `generatedTokensPerSecond`, `selectedTokensPerSecond`,
+   `tokenDropRatio`, `importantTokenSendRatio`, and `selectionSavingsRatio`.
+
+The expected result is that important tokens remain transmitted while
+low-priority tokens are reduced.
 
 The token script summarizes:
 
