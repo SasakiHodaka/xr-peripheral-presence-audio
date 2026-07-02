@@ -6,9 +6,7 @@ from pathlib import Path
 
 EXPECTED_CONDITIONS = [
     "TRADITIONAL",
-    "DIRECTION_ONLY",
     "DIRECTION_DISTANCE",
-    "DIRECTION_DISTANCE_SPEAKING",
     "FULL_SCENE_TOKEN",
 ]
 
@@ -236,7 +234,7 @@ def quality_checks(token_stats, metric_stats, event_stats):
     missing_semantics = sorted(EXPECTED_SCRIPTED_SEMANTICS - found_semantics)
 
     return [
-        ("All five conditions", not missing, "missing=" + "|".join(missing) if missing else "ok"),
+        ("All main conditions", not missing, "missing=" + "|".join(missing) if missing else "ok"),
         ("Token rows", total_token_rows > 0, f"rows={total_token_rows}"),
         ("Speaking rows", speaking_rows > 0, f"speaking={speaking_rows}"),
         ("Semantic rows", semantic_rows > 0, f"semantic={semantic_rows}"),

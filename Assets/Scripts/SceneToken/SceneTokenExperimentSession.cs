@@ -12,9 +12,7 @@ namespace SceneTokens
         public SceneTokenRenderCondition[] conditionOrder =
         {
             SceneTokenRenderCondition.TRADITIONAL,
-            SceneTokenRenderCondition.DIRECTION_ONLY,
             SceneTokenRenderCondition.DIRECTION_DISTANCE,
-            SceneTokenRenderCondition.DIRECTION_DISTANCE_SPEAKING,
             SceneTokenRenderCondition.FULL_SCENE_TOKEN
         };
         public bool autoAdvanceCondition = true;

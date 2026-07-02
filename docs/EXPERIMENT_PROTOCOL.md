@@ -42,10 +42,10 @@ The scene contains three speaker avatars and one listener camera.
 ### Rendering Condition
 
 - `1`: traditional object position
-- `2`: direction only
-- `3`: direction + distance
-- `4`: direction + distance + speaking state
-- `5`: full Scene Token
+- `2`: direction + distance
+- `3`: full Scene Token
+- `4`: direction only (optional ablation)
+- `5`: direction + distance + speaking state (optional ablation)
 
 ### Experiment Session
 
@@ -125,38 +125,27 @@ Purpose:
 
 - Baseline spatial audio rendering.
 
-### Condition 2: DIRECTION_ONLY
-
-Uses only the quantized direction token.
-
-Purpose:
-
-- Tests whether coarse direction metadata alone is useful.
-
-### Condition 3: DIRECTION_DISTANCE
+### Condition 2: DIRECTION_DISTANCE
 
 Uses quantized direction and distance.
 
 Purpose:
 
-- Tests whether distance tokenization improves spatial understanding.
+- Spatial audio baseline using listener-relative direction and distance.
 
-### Condition 4: DIRECTION_DISTANCE_SPEAKING
-
-Uses direction, distance, and speaking state.
-
-Purpose:
-
-- Tests whether explicit speaking-state representation improves active-speaker
-  understanding.
-
-### Condition 5: FULL_SCENE_TOKEN
+### Condition 3: FULL_SCENE_TOKEN
 
 Uses direction, distance, speaking state, turn state, and semantic token.
 
 Purpose:
 
 - Tests the full proposed Scene Token representation.
+
+### Optional Ablation Conditions
+
+`DIRECTION_ONLY` and `DIRECTION_DISTANCE_SPEAKING` are retained in the
+implementation for development and ablation checks, but they are not required
+for the main user study.
 
 ## Logs
 
@@ -184,8 +173,13 @@ distance,
 speakingState,
 turnState,
 semanticToken,
+urgency,
+targetObjectId,
 utteranceText,
 semanticConfidence,
+priority,
+selectedForTransmission,
+selectionReason,
 condition
 ```
 
@@ -216,7 +210,14 @@ tokensPerSecond,
 jsonBytesPerSecond,
 compactBytesPerSecond,
 objectMetadataBytesPerSecond,
-compactSavingsRatio
+compactSavingsRatio,
+generatedTokensPerSecond,
+selectedTokensPerSecond,
+selectedJsonBytesPerSecond,
+selectedCompactBytesPerSecond,
+tokenDropRatio,
+importantTokenSendRatio,
+selectionSavingsRatio
 ```
 
 Purpose:
@@ -264,6 +265,7 @@ The metrics script summarizes:
 - compact Scene Token bytes per second
 - object metadata bytes per second
 - compact savings ratio
+- selected token throughput and selection savings ratio when token selection is enabled
 
 The token script summarizes:
 
@@ -299,7 +301,8 @@ The summary script writes a Markdown report with:
 
 Before treating a run as valid, confirm:
 
-- all five conditions appear in the metrics CSV
+- all three main conditions appear in the metrics CSV:
+  `TRADITIONAL`, `DIRECTION_DISTANCE`, `FULL_SCENE_TOKEN`
 - event log includes `session_start`
 - event log includes `trial_start`
 - event log includes `trial_stop`

@@ -2100,7 +2100,7 @@ MonoBehaviour:
   eventLogger: {fileID: 1812055680}
   scriptedConversation: {fileID: 1812055675}
   startScriptedConversationWithTrial: 1
-  conditionOrder: 0100000002000000030000000400000005000000
+  conditionOrder: 010000000300000005000000
   autoAdvanceCondition: 1
   loopConditions: 0
   conditionDurationSeconds: 30

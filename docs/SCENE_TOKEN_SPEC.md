@@ -409,22 +409,21 @@ Current implementation:
 
 ## Evaluation Conditions
 
-The prototype supports five conditions:
+The main user study uses three conditions:
 
 1. `TRADITIONAL`
    - Uses the original speaker object positions.
-2. `DIRECTION_ONLY`
-   - Uses quantized direction with a fixed radius.
-3. `DIRECTION_DISTANCE`
+2. `DIRECTION_DISTANCE`
    - Uses quantized direction and quantized distance.
-4. `DIRECTION_DISTANCE_SPEAKING`
-   - Adds speaking-state gating.
-5. `FULL_SCENE_TOKEN`
+3. `FULL_SCENE_TOKEN`
    - Adds turn-state and semantic-token modulation.
 
-These conditions make it possible to test whether each token layer contributes
-to speaker localization, speaker identification, and conversation
-understanding.
+These conditions compare ordinary object-based spatial audio, spatial metadata
+rendering, and the proposed semantic Scene Token rendering.
+
+The implementation still keeps `DIRECTION_ONLY` and
+`DIRECTION_DISTANCE_SPEAKING` as optional ablation conditions for development
+checks, but they are not required for the main user study.
 
 ## Current Research Claim
 

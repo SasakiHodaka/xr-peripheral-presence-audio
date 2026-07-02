@@ -60,6 +60,12 @@ public static class SceneTokenMockSceneWizard
         experimentSession.eventLogger = eventLogger;
         experimentSession.conditionDurationSeconds = 30f;
         experimentSession.autoAdvanceCondition = true;
+        experimentSession.conditionOrder = new[]
+        {
+            SceneTokenRenderCondition.TRADITIONAL,
+            SceneTokenRenderCondition.DIRECTION_DISTANCE,
+            SceneTokenRenderCondition.FULL_SCENE_TOKEN
+        };
         experimentSession.scriptedConversation = scriptedConversation;
         experimentSession.startScriptedConversationWithTrial = true;
 

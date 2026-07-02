@@ -272,9 +272,7 @@ def print_quality_checks(by_condition):
     print("quality_check,result,details")
     expected_conditions = {
         "TRADITIONAL",
-        "DIRECTION_ONLY",
         "DIRECTION_DISTANCE",
-        "DIRECTION_DISTANCE_SPEAKING",
         "FULL_SCENE_TOKEN",
     }
     found_conditions = set(by_condition.keys())
@@ -282,7 +280,7 @@ def print_quality_checks(by_condition):
     print(
         "all_conditions_present,{0},{1}".format(
             "OK" if not missing else "CHECK",
-            "missing=" + "|".join(missing) if missing else "all five conditions found",
+            "missing=" + "|".join(missing) if missing else "all main conditions found",
         )
     )
 
