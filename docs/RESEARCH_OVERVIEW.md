@@ -175,18 +175,17 @@ Main implementation files:
 
 ### Conditions
 
-The experiment compares five rendering conditions:
+The main user study compares three rendering conditions:
 
 1. `TRADITIONAL`
    - original speaker positions
-2. `DIRECTION_ONLY`
-   - direction token only
-3. `DIRECTION_DISTANCE`
+2. `DIRECTION_DISTANCE`
    - direction and distance tokens
-4. `DIRECTION_DISTANCE_SPEAKING`
-   - direction, distance, and speaking state
-5. `FULL_SCENE_TOKEN`
+3. `FULL_SCENE_TOKEN`
    - direction, distance, speaking state, turn state, and semantic token
+
+`DIRECTION_ONLY` and `DIRECTION_DISTANCE_SPEAKING` remain available as optional
+ablation conditions, but they are not required for the main participant study.
 
 ### Objective Metrics
 
@@ -215,7 +214,7 @@ H1:
 
 ```text
 Adding direction and distance tokens improves speaker localization compared
-with traditional or direction-only conditions.
+with traditional rendering.
 ```
 
 H2:

@@ -22,6 +22,8 @@ presentation, or thesis chapter.
   - Unity component responsibilities and data flow.
 - `EXPERIMENT_PROTOCOL.md`
   - How to run the mock experiment, collect logs, and check data quality.
+- `USER_STUDY_SHEET.md`
+  - Questionnaire items, objective responses, NASA-TLX short form, and ranking questions.
 - `PROJECT_STATUS.md`
   - Current prototype state, validation status, and known limitations.
 - `NEXT_STEPS.md`

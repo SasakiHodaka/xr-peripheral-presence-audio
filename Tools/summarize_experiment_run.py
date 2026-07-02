@@ -10,6 +10,8 @@ EXPECTED_CONDITIONS = [
     "FULL_SCENE_TOKEN",
 ]
 
+MAIN_CONDITION_ORDER = EXPECTED_CONDITIONS
+
 EXPECTED_SCRIPTED_SEMANTICS = {
     "QUESTION",
     "ANSWER",
@@ -53,6 +55,21 @@ def most_common(counter):
         return "-"
     key, count = counter.most_common(1)[0]
     return f"{key} ({count})"
+
+
+def ordered_conditions(mapping):
+    seen = set()
+    ordered = []
+    for condition in MAIN_CONDITION_ORDER:
+        if condition in mapping:
+            ordered.append(condition)
+            seen.add(condition)
+
+    for condition in sorted(mapping):
+        if condition not in seen:
+            ordered.append(condition)
+
+    return ordered
 
 
 def collect_token_stats(root):
@@ -284,7 +301,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
             "| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |",
         ]
     )
-    for condition in sorted(token_stats):
+    for condition in ordered_conditions(token_stats):
         item = token_stats[condition]
         lines.append(
             "| {0} | {1} | {2:.1f} | {3:.1f} | {4} | {5} | {6} | {7} |".format(
@@ -308,7 +325,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
             "| --- | --- | ---: | ---: | ---: | --- | --- | --- | --- |",
         ]
     )
-    for condition in sorted(token_stats):
+    for condition in ordered_conditions(token_stats):
         for speaker_id in sorted(token_stats[condition]["by_speaker"]):
             item = token_stats[condition]["by_speaker"][speaker_id]
             lines.append(
@@ -334,7 +351,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
             "| --- | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
-    for condition in sorted(event_stats):
+    for condition in ordered_conditions(event_stats):
         item = event_stats[condition]
         lines.append(
             "| {0} | {1:.1f} | {2:.3f} | {3:.1f} | {4:.3f} | {5} |".format(
@@ -356,7 +373,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
             "| --- | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
-    for condition in sorted(metric_stats):
+    for condition in ordered_conditions(metric_stats):
         item = metric_stats[condition]
         lines.append(
             "| {0} | {1:.2f} | {2:.2f} | {3:.2f} | {4:.2f} | {5:.1f}% |".format(
@@ -384,7 +401,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
                 "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
             ]
         )
-        for condition in sorted(metric_stats):
+        for condition in ordered_conditions(metric_stats):
             item = metric_stats[condition]
             lines.append(
                 "| {0} | {1:.2f} | {2:.2f} | {3:.2f} | {4:.1f}% | {5:.1f}% | {6:.1f}% |".format(

@@ -12,6 +12,12 @@ EXPECTED_SCRIPTED_SEMANTICS = {
     "AGREEMENT",
 }
 
+MAIN_CONDITION_ORDER = [
+    "TRADITIONAL",
+    "DIRECTION_DISTANCE",
+    "FULL_SCENE_TOKEN",
+]
+
 
 def safe_float(value, default=0.0):
     try:
@@ -166,7 +172,7 @@ def print_summary(by_condition):
 
 def build_summary_rows(by_condition):
     rows = []
-    for condition in sorted(by_condition):
+    for condition in ordered_conditions(by_condition):
         stats = by_condition[condition]
         first_time = stats["first_time"]
         last_time = stats["last_time"]
@@ -221,7 +227,7 @@ def write_summary_csv(path, by_condition):
 
 def build_speaker_rows(by_condition):
     rows = []
-    for condition in sorted(by_condition):
+    for condition in ordered_conditions(by_condition):
         for speaker_id in sorted(by_condition[condition]["by_speaker"]):
             stats = by_condition[condition]["by_speaker"][speaker_id]
             rows.append(
@@ -312,6 +318,21 @@ def print_quality_checks(by_condition):
 
 def speaker_csv_path(summary_path):
     return summary_path.with_name(summary_path.stem + "_by_speaker" + summary_path.suffix)
+
+
+def ordered_conditions(by_condition):
+    seen = set()
+    ordered = []
+    for condition in MAIN_CONDITION_ORDER:
+        if condition in by_condition:
+            ordered.append(condition)
+            seen.add(condition)
+
+    for condition in sorted(by_condition):
+        if condition not in seen:
+            ordered.append(condition)
+
+    return ordered
 
 
 def main():
