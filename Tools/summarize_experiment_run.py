@@ -1,4 +1,4 @@
-import csv
+﻿import csv
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -275,6 +275,13 @@ def quality_checks(token_stats, metric_stats, event_stats):
 
 
 def render_markdown(root, token_files, token_stats, metric_files, metric_stats, event_files, event_stats):
+    total_token_rows = sum(item["rows"] for item in token_stats.values())
+    total_direction_responses = sum(item["direction_responses"] for item in event_stats.values())
+    total_speaker_responses = sum(item["speaker_responses"] for item in event_stats.values())
+    main_conditions = [condition for condition in EXPECTED_CONDITIONS if condition in token_stats or condition in metric_stats]
+    condition_text = ", ".join(main_conditions) if main_conditions else "none"
+    has_participant_responses = total_direction_responses > 0 and total_speaker_responses > 0
+
     lines = [
         "# Scene Token Experiment Summary",
         "",
@@ -420,20 +427,42 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
             "",
             "## Weekly Report Draft",
             "",
-            "本週は、Scene Token実験ログを集計するための解析パイプラインを整理した。"
-            "Tokenログでは、各条件における発話状態、TurnState、SemanticTokenの出現状況を確認できる。"
-            "Eventログでは、方向回答と話者回答の正答率、反応時間、曖昧回答数を条件ごとに集計できる。"
-            "MetricsログからはJSON表現、Compact表現、Object Metadata相当の通信量指標を比較できる。",
+            (
+                "\u4eca\u9031\u306f\u3001Scene Token \u5b9f\u9a13\u30ed\u30b0\u3092\u7814\u7a76\u8a55\u4fa1\u306b\u4f7f\u3048\u308b\u5f62\u3067\u96c6\u8a08\u3059\u308b\u305f\u3081\u306e\u89e3\u6790\u30d1\u30a4\u30d7\u30e9\u30a4\u30f3\u3092\u6574\u7406\u3057\u305f\u3002"
+                f"\u73fe\u5728\u306e\u30ed\u30b0\u3067\u306f {condition_text} \u306e\u4e3b\u6761\u4ef6\u3092\u78ba\u8a8d\u3067\u304d\u3001Token \u30ed\u30b0\u306b\u306f\u5408\u8a08 {total_token_rows} \u884c\u304c\u8a18\u9332\u3055\u308c\u3066\u3044\u308b\u3002"
+                "\u5404\u6761\u4ef6\u306b\u3064\u3044\u3066\u3001\u767a\u8a71\u72b6\u614b\u3001TurnState\u3001SemanticToken\u3001\u8a71\u8005\u3054\u3068\u306e\u51fa\u73fe\u72b6\u6cc1\u3092\u96c6\u8a08\u3067\u304d\u308b\u3088\u3046\u306b\u306a\u3063\u305f\u3002"
+                "\u307e\u305f Metrics \u30ed\u30b0\u304b\u3089 JSON \u8868\u73fe\u3001Compact \u8868\u73fe\u3001Object Metadata \u76f8\u5f53\u306e\u901a\u4fe1\u91cf\u6307\u6a19\u3092\u6bd4\u8f03\u3067\u304d\u308b\u305f\u3081\u3001"
+                "Scene Token \u304c\u7a7a\u9593\u60c5\u5831\u3068\u4f1a\u8a71\u72b6\u614b\u3092\u3069\u306e\u7a0b\u5ea6\u306e\u8868\u73fe\u91cf\u3067\u6271\u3048\u308b\u304b\u3092\u78ba\u8a8d\u3067\u304d\u308b\u3002"
+            ),
             "",
-            "今後はUnity Editor上で5条件すべての実ログを取得し、Scene Tokenの追加情報が"
-            "話者把握、方向把握、会話理解に与える影響を分析する。"
-            "現時点では通信量削減を主張の中心に置かず、空間情報と会話状態を統合した離散表現が"
-            "VR音声コミュニケーション理解を支援するかを評価対象とする。",
+            render_weekly_response_paragraph(
+                has_participant_responses,
+                total_direction_responses,
+                total_speaker_responses,
+            ),
             "",
         ]
     )
     return "\n".join(lines)
 
+
+def render_weekly_response_paragraph(has_participant_responses, total_direction_responses, total_speaker_responses):
+    if has_participant_responses:
+        return (
+            "\u53c2\u52a0\u8005\u5fdc\u7b54\u306b\u3064\u3044\u3066\u3082\u3001"
+            f"Direction response \u3092 {total_direction_responses} \u4ef6\u3001Speaker response \u3092 {total_speaker_responses} \u4ef6\u8a18\u9332\u3067\u304d\u305f\u3002"
+            "\u3053\u308c\u306b\u3088\u308a\u3001TRADITIONAL\u3001DIRECTION_DISTANCE\u3001FULL_SCENE_TOKEN \u306e 3 \u6761\u4ef6\u306b\u3064\u3044\u3066\u3001"
+            "\u65b9\u5411\u56de\u7b54\u7cbe\u5ea6\u3001\u8a71\u8005\u56de\u7b54\u7cbe\u5ea6\u3001\u53cd\u5fdc\u6642\u9593\u3092\u6761\u4ef6\u3054\u3068\u306b\u96c6\u8a08\u3067\u304d\u308b\u72b6\u614b\u306b\u306a\u3063\u305f\u3002"
+            "\u4e00\u65b9\u3067\u3001\u4e00\u90e8\u306e\u5fdc\u7b54\u306f\u767a\u8a71\u8005\u304c\u660e\u78ba\u3067\u306a\u3044\u6642\u70b9\u306b\u884c\u308f\u308c\u305f\u305f\u3081 ambiguous \u3068\u3057\u3066\u8a18\u9332\u3055\u308c\u305f\u3002"
+            "\u6b21\u306e\u30d1\u30a4\u30ed\u30c3\u30c8\u3067\u306f\u3001HUD \u4e0a\u306e\u5fdc\u7b54\u30bf\u30a4\u30df\u30f3\u30b0\u8868\u793a\u3084\u6307\u793a\u6587\u3092\u6539\u5584\u3057\u3001"
+            "\u66d6\u6627\u5fdc\u7b54\u3092\u6e1b\u3089\u3059\u3002"
+        )
+
+    return (
+        "\u4e00\u65b9\u3067\u3001\u73fe\u5728\u306e\u4ee3\u8868\u30ed\u30b0\u306b\u306f\u53c2\u52a0\u8005\u5fdc\u7b54\u304c\u307e\u3060\u542b\u307e\u308c\u3066\u3044\u306a\u3044\u3002"
+        f"Direction response \u306f {total_direction_responses} \u4ef6\u3001Speaker response \u306f {total_speaker_responses} \u4ef6\u3067\u3042\u308a\u3001"
+        "\u65b9\u5411\u56de\u7b54\u7cbe\u5ea6\u3001\u8a71\u8005\u56de\u7b54\u7cbe\u5ea6\u3001\u53cd\u5fdc\u6642\u9593\u3092\u8a55\u4fa1\u3059\u308b\u306b\u306f Unity Editor \u4e0a\u3067\u518d\u53ce\u9332\u304c\u5fc5\u8981\u3067\u3042\u308b\u3002"
+    )
 
 def main():
     if len(sys.argv) not in (2, 3):

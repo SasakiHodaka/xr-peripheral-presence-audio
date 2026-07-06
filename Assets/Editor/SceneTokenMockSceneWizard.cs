@@ -80,6 +80,7 @@ public static class SceneTokenMockSceneWizard
         manager.listener = camera.transform;
         manager.speakers = speakers;
         manager.logger = logger;
+        manager.eventLogger = eventLogger;
         manager.decoderRenderer = renderer;
         manager.metrics = metrics;
         manager.experimentSession = experimentSession;

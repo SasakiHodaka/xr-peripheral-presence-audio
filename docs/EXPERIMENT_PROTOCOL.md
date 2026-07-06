@@ -61,6 +61,9 @@ The scene contains three speaker avatars and one listener camera.
 
 ### Participant Response
 
+- Respond when the HUD shows `RESPOND NOW`.
+- Wait when the HUD shows `WAIT`; responses during this state are still logged
+  but are marked as ambiguous.
 - Arrow Up: FRONT
 - Arrow Right: RIGHT
 - Arrow Down: BACK
@@ -71,6 +74,8 @@ The scene contains three speaker avatars and one listener camera.
 - Use the response HUD buttons for all eight directions:
   `FRONT`, `FRONT_RIGHT`, `RIGHT`, `BACK_RIGHT`, `BACK`, `BACK_LEFT`,
   `LEFT`, and `FRONT_LEFT`.
+- The event log records `response_window_start` and `response_window_end`
+  events when a single active-speaker response window opens or closes.
 
 ## Current Prototype Trial Flow
 
@@ -88,7 +93,7 @@ The scene contains three speaker avatars and one listener camera.
    - warning or instruction token
 9. During each condition, record at least one direction guess and one speaker
    guess using the response keys or HUD buttons.
-   - Prefer moments where the HUD target shows one active speaker.
+   - Prefer moments where the HUD shows `RESPOND NOW`.
    - Responses during no-speaker or overlap moments are logged as
      `ambiguous=true` and are excluded from scored accuracy.
 10. Let timed condition advancement occur, or press `N`.

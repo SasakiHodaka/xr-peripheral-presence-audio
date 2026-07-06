@@ -2,7 +2,7 @@
 
 ## Title
 
-VR空間におけるScene Tokenを用いた意味的空間音声コミュニケーション手法の提案
+Scene Tokenを用いたVR空間における意味的空間音声コミュニケーション手法の提案
 
 English working title:
 

@@ -11,11 +11,14 @@ namespace SceneTokens
         public SceneTokenLogger logger;
         public SceneTokenDecoderRenderer decoderRenderer;
         public SceneTokenMetrics metrics;
+        public SceneTokenEventLogger eventLogger;
         public SceneTokenExperimentSession experimentSession;
         public SceneTokenScriptedConversation scriptedConversation;
         public bool logTokens = true;
         public bool logOnlyDuringExperimentSession = true;
         public bool showDebugHud = true;
+        public bool showResponseTimingCue = true;
+        public bool logResponseWindowEvents = true;
         public bool enableTokenSelection = false;
         [Range(0f, 1f)]
         public float minimumTransmissionPriority = 0.35f;
@@ -23,6 +26,8 @@ namespace SceneTokens
         private readonly List<SceneToken> latestTokens = new List<SceneToken>();
         private readonly List<SceneToken> generatedTokens = new List<SceneToken>();
         private float nextTokenTime;
+        private bool wasResponseWindowOpen;
+        private string lastResponseWindowTarget = string.Empty;
 
         public IReadOnlyList<SceneToken> LatestTokens
         {
@@ -36,6 +41,7 @@ namespace SceneTokens
             logger = GetComponent<SceneTokenLogger>();
             decoderRenderer = GetComponent<SceneTokenDecoderRenderer>();
             metrics = GetComponent<SceneTokenMetrics>();
+            eventLogger = GetComponent<SceneTokenEventLogger>();
             experimentSession = GetComponent<SceneTokenExperimentSession>();
             scriptedConversation = GetComponent<SceneTokenScriptedConversation>();
         }
@@ -60,6 +66,11 @@ namespace SceneTokens
             if (metrics == null)
             {
                 metrics = GetComponent<SceneTokenMetrics>();
+            }
+
+            if (eventLogger == null)
+            {
+                eventLogger = GetComponent<SceneTokenEventLogger>();
             }
 
             if (experimentSession == null)
@@ -214,6 +225,7 @@ namespace SceneTokens
 
             GUILayout.Space(8f);
             GUILayout.Label("Participant Responses");
+            DrawResponseTimingCue();
             GUILayout.Label(GetResponseTargetSummary());
 
             GUILayout.BeginHorizontal();
@@ -237,6 +249,41 @@ namespace SceneTokens
             GUILayout.EndHorizontal();
 
             GUILayout.Label("Keys: arrows=FRONT/RIGHT/BACK/LEFT, J/K/L=speaker A/B/C");
+        }
+
+        private void DrawResponseTimingCue()
+        {
+            if (!showResponseTimingCue)
+            {
+                return;
+            }
+
+            var target = GetPrimarySpeakingToken();
+            var isOpen = experimentSession != null && experimentSession.IsRunning && target != null && !IsAmbiguousSpeakingTarget();
+            var previousColor = GUI.color;
+            GUI.color = isOpen ? Color.green : Color.yellow;
+            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.Label(isOpen ? "RESPOND NOW" : "WAIT");
+            GUI.color = previousColor;
+
+            if (isOpen)
+            {
+                GUILayout.Label(string.Format(
+                    "Answer direction and speaker now: direction={0}, speaker={1}, semantic={2}",
+                    target.direction,
+                    target.speakerId,
+                    target.semanticToken));
+            }
+            else if (experimentSession == null || !experimentSession.IsRunning)
+            {
+                GUILayout.Label("Start the session before responding.");
+            }
+            else
+            {
+                GUILayout.Label("Wait for a single active speaker. Responses now will be ambiguous.");
+            }
+
+            GUILayout.EndVertical();
         }
 
         private string GetResponseTargetSummary()
@@ -381,6 +428,52 @@ namespace SceneTokens
             {
                 metrics.Observe(generatedTokens, latestTokens);
             }
+
+            UpdateResponseWindowEvents();
+        }
+
+        private void UpdateResponseWindowEvents()
+        {
+            if (!logResponseWindowEvents || eventLogger == null)
+            {
+                return;
+            }
+
+            var target = GetPrimarySpeakingToken();
+            var isOpen = experimentSession != null && experimentSession.IsRunning && target != null && !IsAmbiguousSpeakingTarget();
+            var targetId = isOpen ? target.speakerId : string.Empty;
+
+            if (isOpen && (!wasResponseWindowOpen || targetId != lastResponseWindowTarget))
+            {
+                eventLogger.WriteEvent(
+                    "response_window_start",
+                    string.Format(
+                        "sessionId={0};participantId={1};trial={2};condition={3};speakerId={4};direction={5};semantic={6};elapsed={7:F3}",
+                        experimentSession.sessionId,
+                        experimentSession.participantId,
+                        experimentSession.TrialIndex,
+                        experimentSession.CurrentCondition,
+                        target.speakerId,
+                        target.direction,
+                        target.semanticToken,
+                        experimentSession.TrialElapsedSeconds));
+            }
+            else if (!isOpen && wasResponseWindowOpen)
+            {
+                eventLogger.WriteEvent(
+                    "response_window_end",
+                    string.Format(
+                        "sessionId={0};participantId={1};trial={2};condition={3};speakerId={4};elapsed={5:F3}",
+                        experimentSession.sessionId,
+                        experimentSession.participantId,
+                        experimentSession.TrialIndex,
+                        experimentSession.CurrentCondition,
+                        lastResponseWindowTarget,
+                        experimentSession.TrialElapsedSeconds));
+            }
+
+            wasResponseWindowOpen = isOpen;
+            lastResponseWindowTarget = targetId;
         }
 
         private bool ShouldWriteExperimentData()

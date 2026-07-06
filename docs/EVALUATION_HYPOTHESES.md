@@ -1,184 +1,188 @@
 # Evaluation Hypotheses
 
-この文書では，実装後に何を検証するのかを先に固定する．
-目的は，Scene Tokenの効果を「話者把握」「会話理解」「通信量」「負荷」
-の観点から評価できるようにすることである．
+This document defines what the Semantic Spatial Audio / Scene Token evaluation should test. The main goal is to evaluate Scene Token as a discrete scene representation that supports conversation understanding, not merely as position metadata.
 
 ## Research Question
 
 ```text
-VR空間の複数人会話において，空間情報と会話状態を統合したScene Tokenを用いることで，
-従来の空間音声提示よりも話者把握と会話理解を支援できるか．
+In multi-speaker VR conversations, can Scene Tokens that integrate spatial information and conversation state improve speaker awareness, direction awareness, and conversation understanding compared with conventional spatial audio presentation?
 ```
 
-## Evaluation Conditions
+## Main Evaluation Conditions
 
-実装では5条件を用いる．論文上では，段階的に情報を追加する比較として説明する．
+The first user study should use three main conditions.
 
 | Condition | Implementation name | Included information | Purpose |
 | --- | --- | --- | --- |
-| C1 | `TRADITIONAL` | original object position | 通常空間音声の基準条件 |
-| C2 | `DIRECTION_ONLY` | direction token | 方向Tokenの効果を確認する |
-| C3 | `DIRECTION_DISTANCE` | direction + distance tokens | 距離Tokenの追加効果を確認する |
-| C4 | `DIRECTION_DISTANCE_SPEAKING` | direction + distance + speaking state | 発話状態Tokenの効果を確認する |
-| C5 | `FULL_SCENE_TOKEN` | direction + distance + speaking + turn + semantic token | Scene Token全体の効果を確認する |
+| C1 | `TRADITIONAL` | original object position | baseline spatial audio |
+| C2 | `DIRECTION_DISTANCE` | quantized direction + distance | spatial metadata only |
+| C3 | `FULL_SCENE_TOKEN` | direction + distance + speaking + turn + semantic token | proposed semantic scene representation |
+
+`DIRECTION_ONLY` and `DIRECTION_DISTANCE_SPEAKING` remain useful for development checks and later ablation analysis, but they are not required for the first main user study.
 
 ## Hypothesis 1: Speaker Localization
 
-仮説:
+Hypothesis:
 
 ```text
-DirectionおよびDistance Tokenを用いることで，話者の方向認識率が向上し，
-回答までの反応時間が短くなる．
+DIRECTION_DISTANCE improves direction response accuracy and reduces direction response latency compared with TRADITIONAL.
 ```
 
-比較:
+Comparison:
 
 - `TRADITIONAL`
-- `DIRECTION_ONLY`
 - `DIRECTION_DISTANCE`
+- `FULL_SCENE_TOKEN`
 
-評価指標:
+Metrics:
 
 - direction response accuracy
 - direction response latency
-- per-condition error pattern
+- direction error pattern by condition
 
-ログ項目:
+Required log fields:
 
 - `condition`
 - `direction`
 - `response_direction`
+- `expected`
 - `isCorrect`
 - `responseLatency`
+- `ambiguous`
 
 ## Hypothesis 2: Active Speaker Identification
 
-仮説:
+Hypothesis:
 
 ```text
-SpeakingState Tokenを加えることで，現在発話している話者を識別しやすくなる．
+FULL_SCENE_TOKEN improves active-speaker identification accuracy and reduces speaker response latency compared with spatial-metadata-only rendering.
 ```
 
-比較:
+Comparison:
 
+- `TRADITIONAL`
 - `DIRECTION_DISTANCE`
-- `DIRECTION_DISTANCE_SPEAKING`
 - `FULL_SCENE_TOKEN`
 
-評価指標:
+Metrics:
 
 - speaker response accuracy
 - speaker response latency
-- active-speaker recognition accuracy
+- active speaker recognition accuracy
 
-ログ項目:
+Required log fields:
 
+- `condition`
 - `speakerId`
 - `speakingState`
+- `turnState`
 - `response_speaker`
+- `expected`
 - `isCorrect`
 - `responseLatency`
+- `ambiguous`
 
 ## Hypothesis 3: Conversation Understanding
 
-仮説:
+Hypothesis:
 
 ```text
-TurnStateおよびSemanticTokenを加えたFULL_SCENE_TOKEN条件では，
-空間情報のみの条件よりも会話の流れを理解しやすくなる．
+FULL_SCENE_TOKEN improves understanding of conversation flow, important utterances, and overlap compared with DIRECTION_DISTANCE.
 ```
 
-比較:
+Comparison:
 
-- `DIRECTION_DISTANCE_SPEAKING`
+- `DIRECTION_DISTANCE`
 - `FULL_SCENE_TOKEN`
 
-評価指標:
+Metrics:
 
 - conversation comprehension score
 - turn/overlap recognition accuracy
 - subjective ease of following the conversation
-- usefulness of semantic emphasis
+- subjective usefulness of semantic emphasis
 
-想定質問例:
+Example comprehension questions:
 
-- 誰が質問したか．
-- 誰が回答したか．
-- 警告発話はどの方向から聞こえたか．
-- 発話が重なった場面を認識できたか．
+- Who asked the question?
+- Who answered?
+- Which speaker gave the instruction or warning?
+- Did the participant notice the overlap?
+- Was the conversation flow easy to follow?
 
-## Hypothesis 4: Communication Metadata Volume
+## Hypothesis 4: Workload and Naturalness
 
-仮説:
-
-```text
-Scene Tokenは，連続的な位置メタデータよりもコンパクトな離散表現として扱える可能性がある．
-```
-
-位置付け:
+Hypothesis:
 
 ```text
-通信量削減は副次的評価であり，主貢献は会話理解支援である．
+FULL_SCENE_TOKEN supports conversation understanding without substantially increasing workload or unnaturalness, as long as volume and pitch emphasis remain moderate.
 ```
 
-評価指標:
+Metrics:
+
+- NASA-TLX short form
+- naturalness rating
+- ease of identifying the speaker
+- ease of following conversation
+- annoyance or distraction rating
+
+Risk:
+
+```text
+If semantic emphasis is too strong, FULL_SCENE_TOKEN may feel unnatural or distracting. The first study should use light emphasis and evaluate this explicitly.
+```
+
+## Secondary Analysis: Communication Metadata Volume
+
+Communication volume is a secondary analysis. The central claim should remain conversation understanding support, not proven bandwidth reduction.
+
+Hypothesis:
+
+```text
+Scene Token can represent scene state as compact discrete metadata compared with richer object-level metadata, but this should be reported as supporting evidence rather than the main contribution.
+```
+
+Metrics:
 
 - tokens per second
 - JSON-like bytes per second
 - compact token bytes per second
 - object metadata bytes per second
 - compact savings ratio
+- token selection metrics when enabled
 
-ログ項目:
+Required log fields:
 
 - `tokensPerSecond`
 - `jsonBytesPerSecond`
 - `compactBytesPerSecond`
 - `objectMetadataBytesPerSecond`
 - `compactSavingsRatio`
-
-## Hypothesis 5: Workload
-
-仮説:
-
-```text
-Scene Tokenによる意味的強調は，会話理解を支援しつつ，認知負荷を大きく増加させない．
-```
-
-評価指標:
-
-- NASA-TLX
-- naturalness rating
-- ease of identifying speaker
-- ease of following conversation
-- discomfort or annoyance rating
-
-注意:
-
-```text
-FULL_SCENE_TOKENの音量・ピッチ強調が強すぎると不自然さや負荷が増えるため，
-v1.0では軽い音量・ピッチ調整に留める．
-```
+- `generatedTokensPerSecond`
+- `selectedTokensPerSecond`
+- `tokenDropRatio`
+- `importantTokenSendRatio`
+- `selectionSavingsRatio`
 
 ## Minimum Valid Evaluation Output
 
-最初の予備実験で最低限必要な出力:
+A minimum pilot evaluation should produce:
 
-- 5条件すべてのCSVログ
-- 条件別の方向正答率
-- 条件別の話者正答率
-- 条件別の平均反応時間
-- 条件別の通信量推定
-- 会話理解アンケート結果
-- NASA-TLXまたは簡易負荷評価
+- token, event, and metrics CSV logs for all three main conditions
+- direction response accuracy by condition
+- speaker response accuracy by condition
+- average response latency by condition
+- conversation comprehension score by condition
+- subjective rating by condition
+- NASA-TLX short-form results
+- communication metrics by condition
 
 ## Discussion Targets
 
-論文の考察では，以下を示す．
+The thesis or presentation should discuss:
 
-1. Scene Tokenで話者を見つけやすくなったか．
-2. Scene Tokenで会話を理解しやすくなったか．
-3. Scene Tokenで通信量は減ったか，または構造化できたか．
-4. Scene Tokenで認知負荷は増えなかったか．
-5. どのToken要素が有効で，どの要素に改善余地があるか．
+1. Whether Scene Token made speakers easier to identify.
+2. Whether Scene Token made conversation flow easier to follow.
+3. Which token fields were useful.
+4. Whether Scene Token increased workload or unnaturalness.
+5. Whether communication metrics support the representation design as a secondary result.

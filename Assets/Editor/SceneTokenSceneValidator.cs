@@ -72,6 +72,7 @@ public static class SceneTokenSceneValidator
             Require(manager.listener != null, errors, "SceneTokenManager.listener is not assigned.");
             Require(manager.speakers != null && manager.speakers.Length == 3, errors, "SceneTokenManager.speakers must contain three speakers.");
             Require(manager.logger != null, errors, "SceneTokenManager.logger is not assigned.");
+            Require(manager.eventLogger != null || manager.GetComponent<SceneTokenEventLogger>() != null, errors, "SceneTokenManager.eventLogger is not assigned.");
             Require(manager.decoderRenderer != null, errors, "SceneTokenManager.decoderRenderer is not assigned.");
             Require(manager.metrics != null, errors, "SceneTokenManager.metrics is not assigned.");
             Require(manager.experimentSession != null, errors, "SceneTokenManager.experimentSession is not assigned.");
@@ -100,7 +101,10 @@ public static class SceneTokenSceneValidator
             Require(experimentSession.decoderRenderer != null, errors, "SceneTokenExperimentSession.decoderRenderer is not assigned.");
             Require(experimentSession.eventLogger != null, errors, "SceneTokenExperimentSession.eventLogger is not assigned.");
             Require(experimentSession.scriptedConversation != null, errors, "SceneTokenExperimentSession.scriptedConversation is not assigned.");
-            Require(experimentSession.conditionOrder != null && experimentSession.conditionOrder.Length == 5, errors, "SceneTokenExperimentSession.conditionOrder should contain five conditions.");
+            Require(
+                HasMainConditions(experimentSession.conditionOrder),
+                errors,
+                "SceneTokenExperimentSession.conditionOrder should contain TRADITIONAL, DIRECTION_DISTANCE, and FULL_SCENE_TOKEN.");
             Require(experimentSession.conditionDurationSeconds > 0f, errors, "SceneTokenExperimentSession.conditionDurationSeconds must be positive.");
             Require(!string.IsNullOrWhiteSpace(experimentSession.participantId), errors, "SceneTokenExperimentSession.participantId should have a default value.");
         }
@@ -114,6 +118,19 @@ public static class SceneTokenSceneValidator
 
         ValidateSpeakers(speakers, errors);
         return Report(errors);
+    }
+
+    private static bool HasMainConditions(SceneTokenRenderCondition[] conditionOrder)
+    {
+        if (conditionOrder == null || conditionOrder.Length != 3)
+        {
+            return false;
+        }
+
+        var conditions = new HashSet<SceneTokenRenderCondition>(conditionOrder);
+        return conditions.Contains(SceneTokenRenderCondition.TRADITIONAL)
+            && conditions.Contains(SceneTokenRenderCondition.DIRECTION_DISTANCE)
+            && conditions.Contains(SceneTokenRenderCondition.FULL_SCENE_TOKEN);
     }
 
     private static void ValidateSpeakers(SpeakerObject[] speakers, ICollection<string> errors)

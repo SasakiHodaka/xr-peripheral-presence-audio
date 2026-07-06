@@ -10,6 +10,15 @@ Goal:
 Obtain one complete logged run across the three main conditions.
 ```
 
+Status:
+
+- Completed for prototype validation on 2026-07-06.
+- Representative run: `Runs/run_20260706_230957`.
+- The run includes direction and speaker responses for:
+  - `TRADITIONAL`
+  - `DIRECTION_DISTANCE`
+  - `FULL_SCENE_TOKEN`
+
 Tasks:
 
 1. Open `Assets/Scenes/SceneTokenMock.unity`.
@@ -51,10 +60,41 @@ Current status:
 
 - token, semantic, turn-state, overlap, and metrics logging are working
 - response logging has been implemented in the HUD and keyboard controls
-- the next Unity run should confirm that `response_direction` and
-  `response_speaker` appear in the event log
+- `response_direction` and `response_speaker` now appear in the event log for
+  all three main conditions
+- the run still contains ambiguous responses, so the formal pilot should make
+  response timing clearer
 
-## Priority 2: Strengthen the Research Definition
+## Priority 2: Reduce Ambiguous Responses Before Pilot
+
+Goal:
+
+```text
+Make participant response timing clear enough for a small pilot.
+```
+
+Tasks:
+
+1. Add or refine a HUD prompt that shows when a response should be made.
+   - Implemented: `RESPOND NOW` / `WAIT` cue in the debug HUD.
+2. Consider logging a `response_window_start` event when the scripted
+   conversation has a clear active speaker.
+   - Implemented: `response_window_start` and `response_window_end` events.
+3. Keep ambiguous responses in the log, but make the pilot instruction avoid
+   no-speaker and overlap moments unless explicitly tested.
+
+Deliverable:
+
+- one pilot-ready response workflow with fewer ambiguous responses
+
+Next validation:
+
+- Run one short session and confirm that the event log includes
+  `response_window_start` and `response_window_end`.
+- Confirm that responding only while `RESPOND NOW` is visible reduces
+  `ambiguousResponses`.
+
+## Priority 3: Strengthen the Research Definition
 
 Goal:
 
@@ -80,7 +120,7 @@ Deliverable:
 
 - one slide or diagram showing the research gap and proposed pipeline
 
-## Priority 3: Clean Up the Demo Scenario
+## Priority 4: Clean Up the Demo Scenario
 
 Goal:
 
@@ -104,7 +144,7 @@ Deliverable:
 
 - one repeatable 30-second to 60-second three-speaker scenario
 
-## Priority 4: Prepare Evaluation Metrics
+## Priority 5: Prepare Evaluation Metrics
 
 Goal:
 
@@ -132,7 +172,7 @@ Deliverable:
 
 - experiment sheet or questionnaire draft
 
-## Priority 5: Extend Analysis Tools
+## Priority 6: Extend Analysis Tools
 
 Goal:
 
@@ -161,7 +201,7 @@ Deliverable:
 
 - token-level analysis output that can be copied into a weekly report
 
-## Priority 6: Improve Engineering Quality
+## Priority 7: Improve Engineering Quality
 
 Tasks:
 
@@ -174,7 +214,7 @@ Deliverable:
 
 - repeatable validation that token generation is stable
 
-## Priority 7: Future Research Extensions
+## Priority 8: Future Research Extensions
 
 Do only after the controlled baseline is stable:
 

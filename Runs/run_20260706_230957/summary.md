@@ -70,4 +70,4 @@
 
 今週は、Scene Token 実験ログを研究評価に使える形で集計するための解析パイプラインを整理した。現在のログでは TRADITIONAL, DIRECTION_DISTANCE, FULL_SCENE_TOKEN の主条件を確認でき、Token ログには合計 2541 行が記録されている。各条件について、発話状態、TurnState、SemanticToken、話者ごとの出現状況を集計できるようになった。また Metrics ログから JSON 表現、Compact 表現、Object Metadata 相当の通信量指標を比較できるため、Scene Token が空間情報と会話状態をどの程度の表現量で扱えるかを確認できる。
 
-参加者応答についても、Direction response を 11 件、Speaker response を 11 件記録できた。これにより、TRADITIONAL、DIRECTION_DISTANCE、FULL_SCENE_TOKEN の 3 条件について、方向回答精度、話者回答精度、反応時間を条件ごとに集計できる状態になった。一方で、一部の応答は発話者が明確でない時点に行われたため ambiguous として記録された。次のパイロットでは、HUD 上の応答タイミング表示や指示文を改善し、曖昧応答を減らす。
+一方で、現在の代表ログには参加者応答がまだ含まれていない。Direction response は 11 件、Speaker response は 11 件であり、方向回答精度、話者回答精度、反応時間を評価するには Unity Editor 上でセッション中に HUD ボタンまたはキー入力を使った再収録が必要である。次回は TRADITIONAL、DIRECTION_DISTANCE、FULL_SCENE_TOKEN の各条件で、少なくとも方向応答と話者応答を 1 回以上記録し、Scene Token の追加情報が話者把握、方向把握、会話理解に与える影響を比較できるログを取得する。

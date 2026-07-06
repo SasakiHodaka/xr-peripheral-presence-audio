@@ -24,8 +24,7 @@ reconstruct semantic spatial audio.
 Japanese definition:
 
 ```text
-Scene Tokenとは，VR空間における状況理解に必要な空間情報と意味情報を統合し，
-受信側で空間音声を再構成するための最小通信単位である．
+Scene Tokenとは、VR空間における状況理解に必要な空間情報と意味情報を統合し、受信側で空間音声を再構成するための最小通信単位である。
 ```
 
 ## Design Position

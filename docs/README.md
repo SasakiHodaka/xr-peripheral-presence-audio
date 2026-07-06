@@ -13,6 +13,8 @@ presentation, or thesis chapter.
     audio tokens, turn taking, and likely defense questions.
 - `SCENE_TOKEN_SPEC.md`
   - Formal Scene Token definition, fields, token generation, and token-based rendering.
+- `SCENE_TOKEN_ONE_SLIDE.md`
+  - One-slide research-gap diagram and short speaking script for meetings.
 - `EVALUATION_HYPOTHESES.md`
   - Hypotheses, comparison conditions, metrics, and required log fields.
 

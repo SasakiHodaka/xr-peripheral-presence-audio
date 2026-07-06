@@ -22,6 +22,8 @@ MemoryCaptures/
 
 # Local validation logs
 unity_*.log
+event_summary_current.csv
+Runs/current_check/
 
 # Python cache
 __pycache__/
