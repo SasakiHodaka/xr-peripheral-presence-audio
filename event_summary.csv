@@ -1,0 +1,5 @@
+condition,events,sessions,participants,trials,eventTypes,directionResponses,speakerResponses,directionAccuracyPct,speakerAccuracyPct,directionLatencySec,speakerLatencySec,ambiguousResponses
+(none),16,,,,condition:2|script_loop:6|script_start:6|script_stop:2,,,0.00,0.00,0.000,0.000,0
+DIRECTION_DISTANCE,9,20260706_230957,P00,2,condition_active:1|response_direction:3|response_speaker:3|trial_start:1|trial_stop:1,RIGHT:3,B:3,0.00,100.00,6.891,6.383,1
+FULL_SCENE_TOKEN,10,20260706_230957,P00,3,condition_active:1|response_direction:4|response_speaker:4|trial_start:1,LEFT:4,C:4,0.00,0.00,8.615,8.940,2
+TRADITIONAL,12,20260706_230957,P00,0|1,condition_active:1|response_direction:4|response_speaker:4|session_start:1|trial_start:1|trial_stop:1,FRONT:2|RIGHT:2,A:2|B:2,50.00,50.00,12.059,12.270,4
