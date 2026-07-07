@@ -63,6 +63,7 @@ The mock scene currently supports:
 - `docs/RESEARCH_STORY_BRIEF.md`: short research story for slide planning
 - `docs/EXPERIMENT_PROTOCOL.md`: how to run a trial and collect logs
 - `docs/ARCHITECTURE.md`: script responsibilities and data flow
+- `Docs/IMPLEMENTATION_FLOW.md`: detailed runtime implementation flow
 - `docs/SCENE_TOKEN_SPEC.md`: research definition, token fields, and design rationale
 - `docs/RELATED_WORK_QA.md`: concise related-work comparison and defense Q&A
 - `docs/NEXT_STEPS.md`: recommended next development tasks

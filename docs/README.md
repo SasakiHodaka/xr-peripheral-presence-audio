@@ -27,6 +27,9 @@ presentation, or thesis chapter.
 
 - `ARCHITECTURE.md`
   - Unity component responsibilities and data flow.
+- `../Docs/IMPLEMENTATION_FLOW.md`
+  - Detailed runtime flow from speaker state acquisition to Scene Token
+    generation, rendering, logging, metrics, and validation.
 - `EXPERIMENT_PROTOCOL.md`
   - How to run the mock experiment, collect logs, and check data quality.
 - `USER_STUDY_SHEET.md`
