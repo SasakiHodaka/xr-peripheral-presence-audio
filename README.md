@@ -59,6 +59,8 @@ The mock scene currently supports:
 ## Documentation
 
 - `docs/PROJECT_STATUS.md`: current state, validation result, known issues
+- `docs/RESEARCH_STORY_FORMAT.md`: basic thesis and presentation story format
+- `docs/RESEARCH_STORY_BRIEF.md`: short research story for slide planning
 - `docs/EXPERIMENT_PROTOCOL.md`: how to run a trial and collect logs
 - `docs/ARCHITECTURE.md`: script responsibilities and data flow
 - `docs/SCENE_TOKEN_SPEC.md`: research definition, token fields, and design rationale

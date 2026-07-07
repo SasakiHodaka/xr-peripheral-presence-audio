@@ -6,6 +6,11 @@ presentation, or thesis chapter.
 
 ## 1. Research Story
 
+- `RESEARCH_STORY_FORMAT.md`
+  - Basic thesis/presentation structure: system overview, user story, problem,
+    research scope, Scene Token method, and evaluation.
+- `RESEARCH_STORY_BRIEF.md`
+  - Short version of the research story for quick reference and slide planning.
 - `RESEARCH_OVERVIEW.md`
   - Background, problem, purpose, novelty, hypotheses, scope, and expected contribution.
 - `RELATED_WORK_QA.md`
