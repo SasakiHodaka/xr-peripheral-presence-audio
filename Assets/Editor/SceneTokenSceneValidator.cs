@@ -45,6 +45,8 @@ public static class SceneTokenSceneValidator
         Require(manager != null, errors, "SceneTokenManager is missing.");
 
         var logger = Object.FindObjectOfType<SceneTokenLogger>();
+        var packetizer = Object.FindObjectOfType<ScenePacketizer>();
+        var packetLogger = Object.FindObjectOfType<ScenePacketLogger>();
         var eventLogger = Object.FindObjectOfType<SceneTokenEventLogger>();
         var metrics = Object.FindObjectOfType<SceneTokenMetrics>();
         var renderer = Object.FindObjectOfType<SceneTokenDecoderRenderer>();
@@ -56,6 +58,16 @@ public static class SceneTokenSceneValidator
         var listener = Camera.main != null ? Camera.main.transform : null;
 
         Require(logger != null, errors, "SceneTokenLogger is missing.");
+        if (packetizer == null)
+        {
+            Debug.LogWarning("[SceneTokenValidation] ScenePacketizer is missing in the scene asset; SceneTokenManager will add one at runtime.");
+        }
+
+        if (packetLogger == null)
+        {
+            Debug.LogWarning("[SceneTokenValidation] ScenePacketLogger is missing in the scene asset; SceneTokenManager will add one at runtime.");
+        }
+
         Require(eventLogger != null, errors, "SceneTokenEventLogger is missing.");
         Require(metrics != null, errors, "SceneTokenMetrics is missing.");
         Require(renderer != null, errors, "SceneTokenDecoderRenderer is missing.");
@@ -104,7 +116,7 @@ public static class SceneTokenSceneValidator
             Require(
                 HasMainConditions(experimentSession.conditionOrder),
                 errors,
-                "SceneTokenExperimentSession.conditionOrder should contain TRADITIONAL, DIRECTION_DISTANCE, and FULL_SCENE_TOKEN.");
+                "SceneTokenExperimentSession.conditionOrder should contain C1_TRADITIONAL, C2_DIRECTION_DISTANCE, C3_FULL_SCENE_TOKEN, and C4_SELECTED_SCENE_TOKEN.");
             Require(experimentSession.conditionDurationSeconds > 0f, errors, "SceneTokenExperimentSession.conditionDurationSeconds must be positive.");
             Require(!string.IsNullOrWhiteSpace(experimentSession.participantId), errors, "SceneTokenExperimentSession.participantId should have a default value.");
         }
@@ -122,15 +134,16 @@ public static class SceneTokenSceneValidator
 
     private static bool HasMainConditions(SceneTokenRenderCondition[] conditionOrder)
     {
-        if (conditionOrder == null || conditionOrder.Length != 3)
+        if (conditionOrder == null || conditionOrder.Length != 4)
         {
             return false;
         }
 
         var conditions = new HashSet<SceneTokenRenderCondition>(conditionOrder);
-        return conditions.Contains(SceneTokenRenderCondition.TRADITIONAL)
-            && conditions.Contains(SceneTokenRenderCondition.DIRECTION_DISTANCE)
-            && conditions.Contains(SceneTokenRenderCondition.FULL_SCENE_TOKEN);
+        return conditions.Contains(SceneTokenRenderCondition.C1_TRADITIONAL)
+            && conditions.Contains(SceneTokenRenderCondition.C2_DIRECTION_DISTANCE)
+            && conditions.Contains(SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN)
+            && conditions.Contains(SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN);
     }
 
     private static void ValidateSpeakers(SpeakerObject[] speakers, ICollection<string> errors)

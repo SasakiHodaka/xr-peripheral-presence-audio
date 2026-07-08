@@ -40,6 +40,8 @@ public static class SceneTokenAnalyzerSelfCheck
         CheckDistanceQuantization(errors);
         CheckConversationQuantization(errors);
         CheckTransformAzimuth(errors);
+        CheckCsvEscaping(errors);
+        CheckMetricByteEstimates(errors);
         return errors;
     }
 
@@ -99,6 +101,44 @@ public static class SceneTokenAnalyzerSelfCheck
         {
             Object.DestroyImmediate(listenerObject);
             Object.DestroyImmediate(speakerObject);
+        }
+    }
+
+    private static void CheckCsvEscaping(List<string> errors)
+    {
+        Expect(errors, SceneToken.EscapeCsv("plain"), "plain", "plain CSV value should not be quoted.");
+        Expect(errors, SceneToken.EscapeCsv("speaker,A"), "\"speaker,A\"", "comma CSV value should be quoted.");
+        Expect(errors, SceneToken.EscapeCsv("say \"hi\""), "\"say \"\"hi\"\"\"", "quote CSV value should be escaped.");
+        Expect(errors, SceneToken.EscapeCsv("line\nbreak"), "\"line\nbreak\"", "newline CSV value should be quoted.");
+
+        Expect(errors, SceneTokenEventLogger.EscapeCsv("event;value"), "event;value", "semicolon event payload should not be quoted.");
+        Expect(errors, SceneTokenEventLogger.EscapeCsv("response=RIGHT,expected=LEFT"), "\"response=RIGHT,expected=LEFT\"", "comma event payload should be quoted.");
+    }
+
+    private static void CheckMetricByteEstimates(List<string> errors)
+    {
+        Expect(errors, SceneTokenMetrics.EstimateJsonBytes(null), 0, "null token JSON bytes should be zero.");
+        Expect(errors, SceneTokenMetrics.EstimateCompactSceneTokenBytes(null), 0, "null token compact bytes should be zero.");
+        Expect(errors, SceneTokenMetrics.EstimateObjectMetadataBytes(), 17, "object metadata byte estimate should match documented layout.");
+
+        var token = new SceneToken
+        {
+            speakerId = "A",
+            direction = SceneTokenDirection.FRONT.ToString(),
+            distance = SceneTokenDistance.NEAR.ToString(),
+            speakingState = SceneSpeakingState.SPEAKING.ToString(),
+            turnState = SceneTurnState.TURN_HOLDER.ToString(),
+            semanticToken = SceneSemanticToken.WARNING.ToString(),
+            urgency = SceneUrgency.HIGH.ToString(),
+            targetObjectId = "door",
+            priority = 0.8f,
+            semanticConfidence = 0.9f
+        };
+
+        Expect(errors, SceneTokenMetrics.EstimateCompactSceneTokenBytes(token), 12, "compact scene token byte estimate should match documented layout.");
+        if (SceneTokenMetrics.EstimateJsonBytes(token) <= SceneTokenMetrics.EstimateCompactSceneTokenBytes(token))
+        {
+            errors.Add("JSON byte estimate should be larger than compact scene token estimate for a populated token.");
         }
     }
 

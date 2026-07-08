@@ -5,9 +5,10 @@ from pathlib import Path
 
 
 EXPECTED_CONDITIONS = [
-    "TRADITIONAL",
-    "DIRECTION_DISTANCE",
-    "FULL_SCENE_TOKEN",
+    "C1_TRADITIONAL",
+    "C2_DIRECTION_DISTANCE",
+    "C3_FULL_SCENE_TOKEN",
+    "C4_SELECTED_SCENE_TOKEN",
 ]
 
 MAIN_CONDITION_ORDER = EXPECTED_CONDITIONS
@@ -163,6 +164,10 @@ def collect_metric_stats(root):
             for row in reader:
                 condition = row.get("condition", "") or "(none)"
                 for field in (
+                    "tokenCount",
+                    "selectedTokenCount",
+                    "importantTokenCount",
+                    "importantTokenKept",
                     "tokensPerSecond",
                     "jsonBytesPerSecond",
                     "compactBytesPerSecond",
@@ -239,8 +244,62 @@ def collect_event_stats(root):
     return files, stats
 
 
-def quality_checks(token_stats, metric_stats, event_stats):
-    found = set(token_stats) | set(metric_stats)
+def collect_packet_stats(root):
+    files = sorted(root.glob("scene_packets_*.csv"))
+    stats = defaultdict(
+        lambda: {
+            "packets": 0,
+            "first_time": None,
+            "last_time": None,
+            "estimated_bytes": 0.0,
+            "payload_bytes": 0.0,
+            "generated_tokens": 0.0,
+            "selected_tokens": 0.0,
+            "dropped_tokens": 0.0,
+            "important_tokens": 0.0,
+            "important_kept": 0.0,
+            "importance": [],
+            "priority": [],
+        }
+    )
+
+    for path in files:
+        with path.open(newline="", encoding="utf-8-sig") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                condition = row.get("condition", "") or "(none)"
+                item = stats[condition]
+                item["packets"] += 1
+
+                timestamp = safe_float(row.get("timestamp"))
+                if item["first_time"] is None or timestamp < item["first_time"]:
+                    item["first_time"] = timestamp
+                if item["last_time"] is None or timestamp > item["last_time"]:
+                    item["last_time"] = timestamp
+
+                item["estimated_bytes"] += safe_float(row.get("estimatedBytes"))
+                item["payload_bytes"] += safe_float(row.get("payloadBytes"))
+                item["generated_tokens"] += safe_float(row.get("generatedTokenCount"))
+                item["selected_tokens"] += safe_float(row.get("selectedTokenCount"))
+                item["dropped_tokens"] += safe_float(row.get("droppedTokenCount"))
+                item["important_tokens"] += safe_float(row.get("importantTokenCount"))
+                item["important_kept"] += safe_float(row.get("importantTokenKeptCount"))
+                item["importance"].append(safe_float(row.get("packetImportance")))
+                item["priority"].append(safe_float(row.get("packetPriority")))
+
+    return files, stats
+
+
+def packet_duration(item):
+    first_time = item["first_time"]
+    last_time = item["last_time"]
+    if first_time is None or last_time is None:
+        return 0.0
+    return max(0.0, last_time - first_time)
+
+
+def quality_checks(token_stats, metric_stats, event_stats, packet_stats):
+    found = set(token_stats) | set(metric_stats) | set(packet_stats)
     missing = [condition for condition in EXPECTED_CONDITIONS if condition not in found]
     total_token_rows = sum(item["rows"] for item in token_stats.values())
     speaking_rows = sum(item["speaking"] for item in token_stats.values())
@@ -249,6 +308,7 @@ def quality_checks(token_stats, metric_stats, event_stats):
     speaker_responses = sum(item["speaker_responses"] for item in event_stats.values())
     direction_scored = sum(item["direction_scored"] for item in event_stats.values())
     speaker_scored = sum(item["speaker_scored"] for item in event_stats.values())
+    total_packets = sum(item["packets"] for item in packet_stats.values())
     found_semantics = {
         semantic
         for item in token_stats.values()
@@ -271,10 +331,11 @@ def quality_checks(token_stats, metric_stats, event_stats):
         ("Speaker responses", speaker_responses > 0, f"responses={speaker_responses}"),
         ("Scored direction responses", direction_scored > 0, f"scored={direction_scored}"),
         ("Scored speaker responses", speaker_scored > 0, f"scored={speaker_scored}"),
+        ("Scene packets", total_packets > 0, f"packets={total_packets}"),
     ]
 
 
-def render_markdown(root, token_files, token_stats, metric_files, metric_stats, event_files, event_stats):
+def render_markdown(root, token_files, token_stats, metric_files, metric_stats, event_files, event_stats, packet_files, packet_stats):
     total_token_rows = sum(item["rows"] for item in token_stats.values())
     total_direction_responses = sum(item["direction_responses"] for item in event_stats.values())
     total_speaker_responses = sum(item["speaker_responses"] for item in event_stats.values())
@@ -289,6 +350,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
         f"- Token log files: {len(token_files)}",
         f"- Metrics log files: {len(metric_files)}",
         f"- Event log files: {len(event_files)}",
+        f"- Packet log files: {len(packet_files)}",
         "",
         "## Quality Checks",
         "",
@@ -296,7 +358,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
         "| --- | --- | --- |",
     ]
 
-    for name, ok, details in quality_checks(token_stats, metric_stats, event_stats):
+    for name, ok, details in quality_checks(token_stats, metric_stats, event_stats, packet_stats):
         lines.append(f"| {name} | {'OK' if ok else 'CHECK'} | {details} |")
 
     lines.extend(
@@ -376,19 +438,20 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
             "",
             "## Communication Metrics",
             "",
-            "| Condition | Tokens/s | JSON B/s | Compact B/s | Object metadata B/s | Compact saving |",
-            "| --- | ---: | ---: | ---: | ---: | ---: |",
+            "| Condition | Avg bytes/s | Token count | Selected count | Drop % | Important kept % | Compact saving |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for condition in ordered_conditions(metric_stats):
         item = metric_stats[condition]
         lines.append(
-            "| {0} | {1:.2f} | {2:.2f} | {3:.2f} | {4:.2f} | {5:.1f}% |".format(
+            "| {0} | {1:.2f} | {2:.0f} | {3:.0f} | {4:.1f}% | {5:.1f}% | {6:.1f}% |".format(
                 condition,
-                average(item["tokensPerSecond"]),
-                average(item["jsonBytesPerSecond"]),
-                average(item["compactBytesPerSecond"]),
-                average(item["objectMetadataBytesPerSecond"]),
+                average(item["selectedJsonBytesPerSecond"]),
+                sum(item["tokenCount"]),
+                sum(item["selectedTokenCount"]),
+                100.0 * average(item["tokenDropRatio"]),
+                100.0 * average(item["importantTokenSendRatio"]),
                 100.0 * average(item["compactSavingsRatio"]),
             )
         )
@@ -422,6 +485,33 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
                 )
             )
 
+    if packet_stats:
+        lines.extend(
+            [
+                "",
+                "## Scene Packet Metrics",
+                "",
+                "| Condition | Packets | Packets/s | Bytes/s | Tokens/packet | Drop % | Important kept % | Avg packet importance |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for condition in ordered_conditions(packet_stats):
+            item = packet_stats[condition]
+            duration = packet_duration(item)
+            packets = item["packets"]
+            lines.append(
+                "| {0} | {1} | {2:.2f} | {3:.2f} | {4:.2f} | {5:.1f}% | {6:.1f}% | {7:.3f} |".format(
+                    condition,
+                    packets,
+                    packets / duration if duration > 0 else 0.0,
+                    item["estimated_bytes"] / duration if duration > 0 else 0.0,
+                    item["selected_tokens"] / packets if packets > 0 else 0.0,
+                    pct(item["dropped_tokens"], item["generated_tokens"]),
+                    pct(item["important_kept"], item["important_tokens"]),
+                    average(item["importance"]),
+                )
+            )
+
     lines.extend(
         [
             "",
@@ -451,7 +541,7 @@ def render_weekly_response_paragraph(has_participant_responses, total_direction_
         return (
             "\u53c2\u52a0\u8005\u5fdc\u7b54\u306b\u3064\u3044\u3066\u3082\u3001"
             f"Direction response \u3092 {total_direction_responses} \u4ef6\u3001Speaker response \u3092 {total_speaker_responses} \u4ef6\u8a18\u9332\u3067\u304d\u305f\u3002"
-            "\u3053\u308c\u306b\u3088\u308a\u3001TRADITIONAL\u3001DIRECTION_DISTANCE\u3001FULL_SCENE_TOKEN \u306e 3 \u6761\u4ef6\u306b\u3064\u3044\u3066\u3001"
+            "\u3053\u308c\u306b\u3088\u308a\u3001C1_TRADITIONAL\u3001C2_DIRECTION_DISTANCE\u3001C3_FULL_SCENE_TOKEN\u3001C4_SELECTED_SCENE_TOKEN \u306e 4 \u6761\u4ef6\u306b\u3064\u3044\u3066\u3001"
             "\u65b9\u5411\u56de\u7b54\u7cbe\u5ea6\u3001\u8a71\u8005\u56de\u7b54\u7cbe\u5ea6\u3001\u53cd\u5fdc\u6642\u9593\u3092\u6761\u4ef6\u3054\u3068\u306b\u96c6\u8a08\u3067\u304d\u308b\u72b6\u614b\u306b\u306a\u3063\u305f\u3002"
             "\u4e00\u65b9\u3067\u3001\u4e00\u90e8\u306e\u5fdc\u7b54\u306f\u767a\u8a71\u8005\u304c\u660e\u78ba\u3067\u306a\u3044\u6642\u70b9\u306b\u884c\u308f\u308c\u305f\u305f\u3081 ambiguous \u3068\u3057\u3066\u8a18\u9332\u3055\u308c\u305f\u3002"
             "\u6b21\u306e\u30d1\u30a4\u30ed\u30c3\u30c8\u3067\u306f\u3001HUD \u4e0a\u306e\u5fdc\u7b54\u30bf\u30a4\u30df\u30f3\u30b0\u8868\u793a\u3084\u6307\u793a\u6587\u3092\u6539\u5584\u3057\u3001"
@@ -477,7 +567,8 @@ def main():
     token_files, token_stats = collect_token_stats(root)
     metric_files, metric_stats = collect_metric_stats(root)
     event_files, event_stats = collect_event_stats(root)
-    markdown = render_markdown(root, token_files, token_stats, metric_files, metric_stats, event_files, event_stats)
+    packet_files, packet_stats = collect_packet_stats(root)
+    markdown = render_markdown(root, token_files, token_stats, metric_files, metric_stats, event_files, event_stats, packet_files, packet_stats)
 
     if len(sys.argv) == 3:
         output_path = Path(sys.argv[2])

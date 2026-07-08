@@ -11,6 +11,8 @@ namespace SceneTokens
         public SceneTokenLogger logger;
         public SceneTokenDecoderRenderer decoderRenderer;
         public SceneTokenMetrics metrics;
+        public ScenePacketizer packetizer;
+        public ScenePacketLogger packetLogger;
         public SceneTokenEventLogger eventLogger;
         public SceneTokenExperimentSession experimentSession;
         public SceneTokenScriptedConversation scriptedConversation;
@@ -21,10 +23,12 @@ namespace SceneTokens
         public bool logResponseWindowEvents = true;
         public bool enableTokenSelection = false;
         [Range(0f, 1f)]
-        public float minimumTransmissionPriority = 0.35f;
+        public float minimumTransmissionImportance = 0.45f;
 
         private readonly List<SceneToken> latestTokens = new List<SceneToken>();
         private readonly List<SceneToken> generatedTokens = new List<SceneToken>();
+        private ScenePacket latestPacket;
+        private int nextPacketSequenceNumber;
         private float nextTokenTime;
         private bool wasResponseWindowOpen;
         private string lastResponseWindowTarget = string.Empty;
@@ -41,6 +45,8 @@ namespace SceneTokens
             logger = GetComponent<SceneTokenLogger>();
             decoderRenderer = GetComponent<SceneTokenDecoderRenderer>();
             metrics = GetComponent<SceneTokenMetrics>();
+            packetizer = GetComponent<ScenePacketizer>();
+            packetLogger = GetComponent<ScenePacketLogger>();
             eventLogger = GetComponent<SceneTokenEventLogger>();
             experimentSession = GetComponent<SceneTokenExperimentSession>();
             scriptedConversation = GetComponent<SceneTokenScriptedConversation>();
@@ -66,6 +72,26 @@ namespace SceneTokens
             if (metrics == null)
             {
                 metrics = GetComponent<SceneTokenMetrics>();
+            }
+
+            if (packetizer == null)
+            {
+                packetizer = GetComponent<ScenePacketizer>();
+            }
+
+            if (packetizer == null)
+            {
+                packetizer = gameObject.AddComponent<ScenePacketizer>();
+            }
+
+            if (packetLogger == null)
+            {
+                packetLogger = GetComponent<ScenePacketLogger>();
+            }
+
+            if (packetLogger == null)
+            {
+                packetLogger = gameObject.AddComponent<ScenePacketLogger>();
             }
 
             if (eventLogger == null)
@@ -118,6 +144,18 @@ namespace SceneTokens
             {
                 GUILayout.Label(metrics.Summary);
                 GUILayout.Label(metrics.SelectionSummary);
+            }
+
+            if (latestPacket != null)
+            {
+                GUILayout.Label(string.Format(
+                    "packet seq={0} bytes={1} selected={2}/{3} drop={4:P0} importantKept={5:P0}",
+                    latestPacket.sequenceNumber,
+                    latestPacket.estimatedBytes,
+                    latestPacket.selectedTokenCount,
+                    latestPacket.generatedTokenCount,
+                    latestPacket.DropRatio,
+                    latestPacket.ImportantTokenKeptRatio));
             }
 
             if (experimentSession != null)
@@ -183,11 +221,12 @@ namespace SceneTokens
                     token.range));
 
                 GUILayout.Label(string.Format(
-                    "  urgency={0} target={1} priority={2:F2} selected={3} reason={4}",
+                    "  urgency={0} target={1} importance={2:F2} priority={3:F2} selected={4} reason={5}",
                     token.urgency,
                     string.IsNullOrEmpty(token.targetObjectId) ? "-" : token.targetObjectId,
+                    token.importance,
                     token.priority,
-                    token.selectedForTransmission,
+                    token.selected,
                     token.selectionReason));
 
                 if (!string.IsNullOrEmpty(token.utteranceText))
@@ -405,11 +444,13 @@ namespace SceneTokens
 
                 if (ShouldTransmitToken(token))
                 {
+                    token.selected = true;
                     token.selectedForTransmission = true;
                     latestTokens.Add(token);
                 }
                 else
                 {
+                    token.selected = false;
                     token.selectedForTransmission = false;
                 }
 
@@ -421,12 +462,26 @@ namespace SceneTokens
 
             if (decoderRenderer != null)
             {
-                decoderRenderer.Render(latestTokens);
+                decoderRenderer.Render(ShouldUseSelectedTokenRendering() ? latestTokens : generatedTokens);
             }
 
             if (ShouldWriteExperimentData() && metrics != null)
             {
                 metrics.Observe(generatedTokens, latestTokens);
+            }
+
+            if (ShouldWriteExperimentData() && packetizer != null && packetLogger != null)
+            {
+                latestPacket = packetizer.BuildPacket(
+                    generatedTokens,
+                    latestTokens,
+                    nextPacketSequenceNumber++,
+                    decoderRenderer != null ? decoderRenderer.renderCondition.ToString() : string.Empty,
+                    experimentSession != null ? experimentSession.sessionId : string.Empty,
+                    experimentSession != null ? experimentSession.participantId : string.Empty,
+                    experimentSession != null ? experimentSession.TrialIndex : 0,
+                    experimentSession != null ? experimentSession.TrialElapsedSeconds : 0f);
+                packetLogger.Write(latestPacket);
             }
 
             UpdateResponseWindowEvents();
@@ -506,24 +561,32 @@ namespace SceneTokens
             var range = DistanceAnalyzer.CalculateHorizontalRange(listener, speaker.transform);
             var azimuth = DirectionAnalyzer.CalculateSignedAzimuth(listener, speaker.transform);
             var isSpeaking = speaker.IsSpeaking;
+            var semanticType = isSpeaking ? speaker.semanticToken.ToString() : SceneSemanticToken.NONE.ToString();
+            var urgency = isSpeaking ? speaker.urgency.ToString() : SceneUrgency.LOW.ToString();
+            var rms = EstimateRms(speaker, isSpeaking);
 
-            return new SceneToken
+            var token = new SceneToken
             {
                 speakerId = speaker.speakerId,
                 azimuth = azimuth,
                 range = range,
                 direction = DirectionAnalyzer.QuantizeDirection(azimuth).ToString(),
                 distance = DistanceAnalyzer.QuantizeDistance(range).ToString(),
+                visibility = EstimateVisibility(azimuth),
                 speakingState = ConversationAnalyzer.QuantizeSpeakingState(isSpeaking).ToString(),
+                speechActive = isSpeaking,
+                rms = rms,
                 turnState = ConversationAnalyzer.QuantizeTurnState(isSpeaking, speakingCount).ToString(),
-                semanticToken = isSpeaking ? speaker.semanticToken.ToString() : SceneSemanticToken.NONE.ToString(),
-                urgency = isSpeaking ? speaker.urgency.ToString() : SceneUrgency.LOW.ToString(),
+                semanticToken = semanticType,
+                semanticType = semanticType,
+                urgency = urgency,
                 targetObjectId = isSpeaking ? speaker.targetObjectId : string.Empty,
                 utteranceText = isSpeaking ? speaker.utteranceText : string.Empty,
                 semanticConfidence = isSpeaking ? speaker.semanticConfidence : 0f,
                 priority = CalculatePriority(isSpeaking, speaker.semanticToken, speaker.urgency, speakingCount),
+                selected = true,
                 selectedForTransmission = true,
-                selectionReason = enableTokenSelection ? string.Empty : "selection_disabled",
+                selectionReason = IsTokenSelectionActive() ? string.Empty : "selection_disabled",
                 condition = decoderRenderer != null ? decoderRenderer.renderCondition.ToString() : string.Empty,
                 participantId = experimentSession != null ? experimentSession.participantId : string.Empty,
                 sessionId = experimentSession != null ? experimentSession.sessionId : string.Empty,
@@ -531,11 +594,15 @@ namespace SceneTokens
                 trialElapsed = experimentSession != null ? experimentSession.TrialElapsedSeconds : 0f,
                 timestamp = Time.time
             };
+
+            token.importance = ImportanceCalculator.Calculate(token);
+            token.estimatedBytes = SceneTokenMetrics.EstimateCompactSceneTokenBytes(token);
+            return token;
         }
 
         private bool ShouldTransmitToken(SceneToken token)
         {
-            if (!enableTokenSelection || token == null)
+            if (!IsTokenSelectionActive() || token == null)
             {
                 if (token != null)
                 {
@@ -545,29 +612,40 @@ namespace SceneTokens
                 return true;
             }
 
-            if (token.semanticToken == SceneSemanticToken.EMERGENCY.ToString() ||
-                token.urgency == SceneUrgency.CRITICAL.ToString())
+            return TokenSelector.ShouldTransmit(token, minimumTransmissionImportance);
+        }
+
+        private bool IsTokenSelectionActive()
+        {
+            return enableTokenSelection || ShouldUseSelectedTokenRendering();
+        }
+
+        private bool ShouldUseSelectedTokenRendering()
+        {
+            return decoderRenderer != null &&
+                   decoderRenderer.renderCondition == SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN;
+        }
+
+        private static string EstimateVisibility(float azimuth)
+        {
+            return Mathf.Abs(azimuth) <= 55f
+                ? SceneTokenVisibility.IN_VIEW.ToString()
+                : SceneTokenVisibility.OUT_OF_VIEW.ToString();
+        }
+
+        private static float EstimateRms(SpeakerObject speaker, bool isSpeaking)
+        {
+            if (!isSpeaking || speaker == null)
             {
-                token.selectionReason = "critical";
-                return true;
+                return 0f;
             }
 
-            if (token.semanticToken == SceneSemanticToken.WARNING.ToString() ||
-                token.semanticToken == SceneSemanticToken.INSTRUCTION.ToString())
+            if (speaker.audioSource != null)
             {
-                token.selectionReason = "important_intent";
-                return true;
+                return Mathf.Clamp01(speaker.audioSource.volume);
             }
 
-            if (token.speakingState == SceneSpeakingState.SPEAKING.ToString() &&
-                token.priority >= minimumTransmissionPriority)
-            {
-                token.selectionReason = "priority";
-                return true;
-            }
-
-            token.selectionReason = "low_priority";
-            return false;
+            return Mathf.Clamp01(speaker.generatedToneAmplitude);
         }
 
         private static float CalculatePriority(bool isSpeaking, SceneSemanticToken semanticToken, SceneUrgency urgency, int speakingCount)

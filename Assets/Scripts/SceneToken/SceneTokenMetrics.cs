@@ -76,7 +76,7 @@ namespace SceneTokens
 
             var timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
             filePath = Path.Combine(Application.persistentDataPath, fileNamePrefix + "_" + timestamp + ".csv");
-            File.WriteAllText(filePath, "timestamp,condition,tokensPerSecond,jsonBytesPerSecond,compactBytesPerSecond,objectMetadataBytesPerSecond,compactSavingsRatio,generatedTokensPerSecond,selectedTokensPerSecond,selectedJsonBytesPerSecond,selectedCompactBytesPerSecond,tokenDropRatio,importantTokenSendRatio,selectionSavingsRatio\n");
+            File.WriteAllText(filePath, "timestamp,condition,tokenCount,selectedTokenCount,importantTokenCount,importantTokenKept,tokensPerSecond,jsonBytesPerSecond,compactBytesPerSecond,objectMetadataBytesPerSecond,compactSavingsRatio,generatedTokensPerSecond,selectedTokensPerSecond,selectedJsonBytesPerSecond,selectedCompactBytesPerSecond,tokenDropRatio,importantTokenSendRatio,selectionSavingsRatio\n");
             windowStartTime = Time.unscaledTime;
         }
 
@@ -169,7 +169,7 @@ namespace SceneTokens
             windowStartTime = Time.unscaledTime;
         }
 
-        private static int EstimateJsonBytes(SceneToken token)
+        public static int EstimateJsonBytes(SceneToken token)
         {
             if (token == null)
             {
@@ -192,7 +192,7 @@ namespace SceneTokens
             return Encoding.UTF8.GetByteCount(jsonLike);
         }
 
-        private static int EstimateCompactSceneTokenBytes(SceneToken token)
+        public static int EstimateCompactSceneTokenBytes(SceneToken token)
         {
             if (token == null)
             {
@@ -205,7 +205,7 @@ namespace SceneTokens
             return 12;
         }
 
-        private static int EstimateObjectMetadataBytes()
+        public static int EstimateObjectMetadataBytes()
         {
             // speaker id(1) + azimuth/elevation/distance/gain as 32-bit floats.
             return 17;
@@ -220,9 +220,13 @@ namespace SceneTokens
 
             var condition = decoderRenderer != null ? decoderRenderer.renderCondition.ToString() : string.Empty;
             var row = string.Format(
-                "{0:F3},{1},{2:F2},{3:F2},{4:F2},{5:F2},{6:F4},{7:F2},{8:F2},{9:F2},{10:F2},{11:F4},{12:F4},{13:F4}\n",
+                "{0:F3},{1},{2},{3},{4},{5},{6:F2},{7:F2},{8:F2},{9:F2},{10:F4},{11:F2},{12:F2},{13:F2},{14:F2},{15:F4},{16:F4},{17:F4}\n",
                 Time.time,
                 condition,
+                windowGeneratedTokenCount,
+                windowSelectedTokenCount,
+                windowImportantTokenCount,
+                windowImportantTokenSentCount,
                 TokensPerSecond,
                 JsonBytesPerSecond,
                 CompactBytesPerSecond,
@@ -238,7 +242,7 @@ namespace SceneTokens
             File.AppendAllText(filePath, row);
         }
 
-        private static bool IsImportantToken(SceneToken token)
+        public static bool IsImportantToken(SceneToken token)
         {
             if (token == null)
             {
@@ -246,8 +250,8 @@ namespace SceneTokens
             }
 
             return token.semanticToken == SceneSemanticToken.EMERGENCY.ToString() ||
-                   token.semanticToken == SceneSemanticToken.WARNING.ToString() ||
-                   token.semanticToken == SceneSemanticToken.INSTRUCTION.ToString() ||
+                   token.semanticType == SceneSemanticToken.WARNING.ToString() ||
+                   token.semanticType == SceneSemanticToken.INSTRUCTION.ToString() ||
                    token.urgency == SceneUrgency.HIGH.ToString() ||
                    token.urgency == SceneUrgency.CRITICAL.ToString();
         }

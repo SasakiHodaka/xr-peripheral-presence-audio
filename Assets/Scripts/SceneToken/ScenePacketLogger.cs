@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace SceneTokens
 {
-    public class SceneTokenLogger : MonoBehaviour
+    public class ScenePacketLogger : MonoBehaviour
     {
-        public string fileNamePrefix = "scene_tokens";
+        public string fileNamePrefix = "scene_packets";
         public bool writeHeaderOnStart = true;
 
         private string filePath;
@@ -25,7 +25,7 @@ namespace SceneTokens
 
             if (writeHeaderOnStart)
             {
-                File.WriteAllText(filePath, "timestamp,sessionId,participantId,trialIndex,trialElapsed,speakerId,azimuth,range,direction,distance,visibility,speakingState,speechActive,rms,turnState,semanticToken,semanticType,urgency,targetObjectId,utteranceText,semanticConfidence,importance,priority,selected,selectedForTransmission,selectionReason,estimatedBytes,condition\n");
+                File.WriteAllText(filePath, "timestamp,packetId,sequenceNumber,sessionId,participantId,trialIndex,trialElapsed,condition,senderId,receiverId,sendReason,generatedTokenCount,selectedTokenCount,droppedTokenCount,importantTokenCount,importantTokenKeptCount,packetImportance,packetPriority,headerBytes,payloadBytes,estimatedBytes,dropRatio,importantTokenKeptRatio\n");
             }
         }
 
@@ -34,14 +34,14 @@ namespace SceneTokens
             Flush();
         }
 
-        public void Write(SceneToken token)
+        public void Write(ScenePacket packet)
         {
-            if (string.IsNullOrEmpty(filePath) || token == null)
+            if (string.IsNullOrEmpty(filePath) || packet == null)
             {
                 return;
             }
 
-            pendingRows.AppendLine(token.ToCsvRow());
+            pendingRows.AppendLine(packet.ToCsvRow());
 
             if (Time.unscaledTime >= nextFlushTime)
             {

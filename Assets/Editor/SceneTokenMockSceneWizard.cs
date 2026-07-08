@@ -37,6 +37,8 @@ public static class SceneTokenMockSceneWizard
 
         var managerObject = new GameObject("SceneTokenSystem");
         var logger = managerObject.AddComponent<SceneTokenLogger>();
+        var packetizer = managerObject.AddComponent<ScenePacketizer>();
+        var packetLogger = managerObject.AddComponent<ScenePacketLogger>();
         var eventLogger = managerObject.AddComponent<SceneTokenEventLogger>();
         var metrics = managerObject.AddComponent<SceneTokenMetrics>();
         var renderer = managerObject.AddComponent<SceneTokenDecoderRenderer>();
@@ -49,7 +51,7 @@ public static class SceneTokenMockSceneWizard
         renderer.listener = camera.transform;
         renderer.speakers = speakers;
         renderer.repositionAudioSources = true;
-        renderer.renderCondition = SceneTokenRenderCondition.FULL_SCENE_TOKEN;
+        renderer.renderCondition = SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN;
 
         metrics.decoderRenderer = renderer;
         conditionController.decoderRenderer = renderer;
@@ -62,9 +64,10 @@ public static class SceneTokenMockSceneWizard
         experimentSession.autoAdvanceCondition = true;
         experimentSession.conditionOrder = new[]
         {
-            SceneTokenRenderCondition.TRADITIONAL,
-            SceneTokenRenderCondition.DIRECTION_DISTANCE,
-            SceneTokenRenderCondition.FULL_SCENE_TOKEN
+            SceneTokenRenderCondition.C1_TRADITIONAL,
+            SceneTokenRenderCondition.C2_DIRECTION_DISTANCE,
+            SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN,
+            SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN
         };
         experimentSession.scriptedConversation = scriptedConversation;
         experimentSession.startScriptedConversationWithTrial = true;
@@ -80,6 +83,8 @@ public static class SceneTokenMockSceneWizard
         manager.listener = camera.transform;
         manager.speakers = speakers;
         manager.logger = logger;
+        manager.packetizer = packetizer;
+        manager.packetLogger = packetLogger;
         manager.eventLogger = eventLogger;
         manager.decoderRenderer = renderer;
         manager.metrics = metrics;

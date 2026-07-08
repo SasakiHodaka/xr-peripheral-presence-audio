@@ -13,9 +13,10 @@ EXPECTED_SCRIPTED_SEMANTICS = {
 }
 
 MAIN_CONDITION_ORDER = [
-    "TRADITIONAL",
-    "DIRECTION_DISTANCE",
-    "FULL_SCENE_TOKEN",
+    "C1_TRADITIONAL",
+    "C2_DIRECTION_DISTANCE",
+    "C3_FULL_SCENE_TOKEN",
+    "C4_SELECTED_SCENE_TOKEN",
 ]
 
 
@@ -277,9 +278,10 @@ def print_quality_checks(by_condition):
     print()
     print("quality_check,result,details")
     expected_conditions = {
-        "TRADITIONAL",
-        "DIRECTION_DISTANCE",
-        "FULL_SCENE_TOKEN",
+        "C1_TRADITIONAL",
+        "C2_DIRECTION_DISTANCE",
+        "C3_FULL_SCENE_TOKEN",
+        "C4_SELECTED_SCENE_TOKEN",
     }
     found_conditions = set(by_condition.keys())
     missing = sorted(expected_conditions - found_conditions)

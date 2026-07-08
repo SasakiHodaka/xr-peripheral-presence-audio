@@ -1991,6 +1991,8 @@ GameObject:
   - component: {fileID: 1812055676}
   - component: {fileID: 1812055675}
   - component: {fileID: 1812055674}
+  - component: {fileID: 1812055683}
+  - component: {fileID: 1812055684}
   m_Layer: 0
   m_Name: SceneTokenSystem
   m_TagString: Untagged
@@ -2019,6 +2021,9 @@ MonoBehaviour:
   logger: {fileID: 1812055681}
   decoderRenderer: {fileID: 1812055678}
   metrics: {fileID: 1812055679}
+  packetizer: {fileID: 1812055683}
+  packetLogger: {fileID: 1812055684}
+  eventLogger: {fileID: 1812055680}
   experimentSession: {fileID: 1812055676}
   scriptedConversation: {fileID: 1812055675}
   logTokens: 1
@@ -2100,7 +2105,7 @@ MonoBehaviour:
   eventLogger: {fileID: 1812055680}
   scriptedConversation: {fileID: 1812055675}
   startScriptedConversationWithTrial: 1
-  conditionOrder: 010000000300000005000000
+  conditionOrder: 01000000020000000300000004000000
   autoAdvanceCondition: 1
   loopConditions: 0
   conditionDurationSeconds: 30
@@ -2144,7 +2149,7 @@ MonoBehaviour:
   midRadius: 2.2
   farRadius: 3.6
   repositionAudioSources: 1
-  renderCondition: 5
+  renderCondition: 3
 --- !u!114 &1812055679
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2186,6 +2191,35 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   fileNamePrefix: scene_tokens
+  writeHeaderOnStart: 1
+--- !u!114 &1812055683
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812055673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6d81d1719d348c4a935ca06030e1e23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  senderId: local
+  receiverId: remote
+  packetHeaderBytes: 16
+--- !u!114 &1812055684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812055673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7b1e3592c6f40cc94cbca77b41cc4fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fileNamePrefix: scene_packets
   writeHeaderOnStart: 1
 --- !u!4 &1812055682
 Transform:

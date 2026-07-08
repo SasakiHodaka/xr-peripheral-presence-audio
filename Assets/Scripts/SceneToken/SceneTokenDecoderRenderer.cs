@@ -11,7 +11,7 @@ namespace SceneTokens
         public float midRadius = 2.2f;
         public float farRadius = 3.6f;
         public bool repositionAudioSources = true;
-        public SceneTokenRenderCondition renderCondition = SceneTokenRenderCondition.FULL_SCENE_TOKEN;
+        public SceneTokenRenderCondition renderCondition = SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN;
 
         private void Reset()
         {
@@ -32,6 +32,11 @@ namespace SceneTokens
             if (listener == null || speakers == null || tokens == null)
             {
                 return;
+            }
+
+            if (renderCondition == SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN)
+            {
+                SilenceSpeakersWithoutSelectedTokens(tokens);
             }
 
             for (var i = 0; i < tokens.Count; i++)
@@ -68,7 +73,7 @@ namespace SceneTokens
 
         private Vector3 DecodePosition(SceneToken token)
         {
-            if (renderCondition == SceneTokenRenderCondition.TRADITIONAL)
+            if (renderCondition == SceneTokenRenderCondition.C1_TRADITIONAL)
             {
                 return FindSpeaker(token.speakerId).transform.position;
             }
@@ -107,7 +112,7 @@ namespace SceneTokens
 
         private float DecodeVolume(SceneToken token)
         {
-            if (renderCondition >= SceneTokenRenderCondition.DIRECTION_DISTANCE_SPEAKING &&
+            if (UsesSpeakingState(renderCondition) &&
                 token.speakingState != SceneSpeakingState.SPEAKING.ToString())
             {
                 return 0f;
@@ -115,13 +120,13 @@ namespace SceneTokens
 
             var baseVolume = 0.7f;
 
-            if (renderCondition >= SceneTokenRenderCondition.DIRECTION_DISTANCE)
+            if (UsesDistance(renderCondition))
             {
                 if (token.distance == SceneTokenDistance.NEAR.ToString()) baseVolume = 1f;
                 if (token.distance == SceneTokenDistance.FAR.ToString()) baseVolume = 0.45f;
             }
 
-            if (renderCondition >= SceneTokenRenderCondition.FULL_SCENE_TOKEN)
+            if (UsesFullSceneToken(renderCondition))
             {
                 if (token.turnState == SceneTurnState.TURN_HOLDER.ToString()) baseVolume *= 1.2f;
                 if (token.turnState == SceneTurnState.OVERLAPPER.ToString()) baseVolume *= 0.8f;
@@ -137,7 +142,7 @@ namespace SceneTokens
 
         private float DecodePitch(SceneToken token)
         {
-            if (renderCondition < SceneTokenRenderCondition.FULL_SCENE_TOKEN)
+            if (!UsesFullSceneToken(renderCondition))
             {
                 return 1f;
             }
@@ -148,6 +153,54 @@ namespace SceneTokens
             if (token.semanticToken == SceneSemanticToken.DISAGREEMENT.ToString()) return 0.95f;
             if (token.urgency == SceneUrgency.CRITICAL.ToString()) return 1.12f;
             return 1f;
+        }
+
+        private void SilenceSpeakersWithoutSelectedTokens(IReadOnlyList<SceneToken> tokens)
+        {
+            for (var i = 0; i < speakers.Length; i++)
+            {
+                var speaker = speakers[i];
+                if (speaker == null || speaker.audioSource == null)
+                {
+                    continue;
+                }
+
+                var found = false;
+                for (var j = 0; j < tokens.Count; j++)
+                {
+                    if (tokens[j] != null && tokens[j].speakerId == speaker.speakerId)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    speaker.audioSource.volume = 0f;
+                }
+            }
+        }
+
+        private static bool UsesDistance(SceneTokenRenderCondition condition)
+        {
+            return condition == SceneTokenRenderCondition.C2_DIRECTION_DISTANCE ||
+                   condition == SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN ||
+                   condition == SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN ||
+                   condition == SceneTokenRenderCondition.DIRECTION_DISTANCE_SPEAKING;
+        }
+
+        private static bool UsesSpeakingState(SceneTokenRenderCondition condition)
+        {
+            return condition == SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN ||
+                   condition == SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN ||
+                   condition == SceneTokenRenderCondition.DIRECTION_DISTANCE_SPEAKING;
+        }
+
+        private static bool UsesFullSceneToken(SceneTokenRenderCondition condition)
+        {
+            return condition == SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN ||
+                   condition == SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN;
         }
     }
 }

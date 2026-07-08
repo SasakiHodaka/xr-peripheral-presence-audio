@@ -33,11 +33,12 @@ namespace SceneTokens
                 return;
             }
 
-            if (Input.GetKeyDown(KeyCode.Alpha1)) SetCondition(SceneTokenRenderCondition.TRADITIONAL);
-            if (Input.GetKeyDown(KeyCode.Alpha2)) SetCondition(SceneTokenRenderCondition.DIRECTION_DISTANCE);
-            if (Input.GetKeyDown(KeyCode.Alpha3)) SetCondition(SceneTokenRenderCondition.FULL_SCENE_TOKEN);
-            if (Input.GetKeyDown(KeyCode.Alpha4)) SetCondition(SceneTokenRenderCondition.DIRECTION_ONLY);
-            if (Input.GetKeyDown(KeyCode.Alpha5)) SetCondition(SceneTokenRenderCondition.DIRECTION_DISTANCE_SPEAKING);
+            if (Input.GetKeyDown(KeyCode.Alpha1)) SetCondition(SceneTokenRenderCondition.C1_TRADITIONAL);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) SetCondition(SceneTokenRenderCondition.C2_DIRECTION_DISTANCE);
+            if (Input.GetKeyDown(KeyCode.Alpha3)) SetCondition(SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN);
+            if (Input.GetKeyDown(KeyCode.Alpha4)) SetCondition(SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN);
+            if (Input.GetKeyDown(KeyCode.Alpha5)) SetCondition(SceneTokenRenderCondition.DIRECTION_ONLY);
+            if (Input.GetKeyDown(KeyCode.Alpha6)) SetCondition(SceneTokenRenderCondition.DIRECTION_DISTANCE_SPEAKING);
         }
 
         public void SetCondition(SceneTokenRenderCondition condition)

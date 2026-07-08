@@ -11,9 +11,10 @@ namespace SceneTokens
         public bool startScriptedConversationWithTrial = true;
         public SceneTokenRenderCondition[] conditionOrder =
         {
-            SceneTokenRenderCondition.TRADITIONAL,
-            SceneTokenRenderCondition.DIRECTION_DISTANCE,
-            SceneTokenRenderCondition.FULL_SCENE_TOKEN
+            SceneTokenRenderCondition.C1_TRADITIONAL,
+            SceneTokenRenderCondition.C2_DIRECTION_DISTANCE,
+            SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN,
+            SceneTokenRenderCondition.C4_SELECTED_SCENE_TOKEN
         };
         public bool autoAdvanceCondition = true;
         public bool loopConditions;
@@ -319,7 +320,7 @@ namespace SceneTokens
         {
             if (conditionOrder == null || conditionOrder.Length == 0)
             {
-                return SceneTokenRenderCondition.FULL_SCENE_TOKEN;
+                return SceneTokenRenderCondition.C3_FULL_SCENE_TOKEN;
             }
 
             currentConditionIndex = Mathf.Clamp(currentConditionIndex, 0, conditionOrder.Length - 1);

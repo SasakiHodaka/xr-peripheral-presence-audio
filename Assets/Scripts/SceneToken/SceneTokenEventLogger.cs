@@ -45,7 +45,7 @@ namespace SceneTokens
             pendingRows.Length = 0;
         }
 
-        private static string EscapeCsv(string value)
+        public static string EscapeCsv(string value)
         {
             if (string.IsNullOrEmpty(value))
             {

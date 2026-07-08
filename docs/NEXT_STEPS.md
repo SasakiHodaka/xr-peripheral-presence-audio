@@ -207,7 +207,9 @@ Tasks:
 
 1. Run the editor analyzer self check for direction, distance, speaking, and turn-state parsing.
 2. Add tests for CSV escaping.
+   - Implemented in `SceneTokenAnalyzerSelfCheck`.
 3. Add tests for metrics byte estimates.
+   - Implemented in `SceneTokenAnalyzerSelfCheck`.
 4. Expand scene validation if the scene wiring changes often.
 
 Deliverable:
