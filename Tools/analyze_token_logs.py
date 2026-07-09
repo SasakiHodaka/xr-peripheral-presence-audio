@@ -19,6 +19,13 @@ MAIN_CONDITION_ORDER = [
     "C4_SELECTED_SCENE_TOKEN",
 ]
 
+CONDITION_ALIASES = {
+    "TRADITIONAL": "C1_TRADITIONAL",
+    "DIRECTION_DISTANCE": "C2_DIRECTION_DISTANCE",
+    "FULL_SCENE_TOKEN": "C3_FULL_SCENE_TOKEN",
+    "SELECTED_SCENE_TOKEN": "C4_SELECTED_SCENE_TOKEN",
+}
+
 
 def safe_float(value, default=0.0):
     try:
@@ -46,11 +53,16 @@ def iter_token_files(target):
     return [target]
 
 
+def normalize_condition(value):
+    condition = value or "(none)"
+    return CONDITION_ALIASES.get(condition, condition)
+
+
 def analyze_file(path, by_condition):
     with path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
         for row in reader:
-            condition = row.get("condition", "") or "(none)"
+            condition = normalize_condition(row.get("condition", ""))
             stats = by_condition[condition]
             stats["rows"] += 1
 

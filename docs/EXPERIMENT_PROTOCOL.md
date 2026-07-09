@@ -41,11 +41,12 @@ The scene contains three speaker avatars and one listener camera.
 
 ### Rendering Condition
 
-- `1`: traditional object position
-- `2`: direction + distance
-- `3`: full Scene Token
-- `4`: direction only (optional ablation)
-- `5`: direction + distance + speaking state (optional ablation)
+- `1`: `C1_TRADITIONAL`
+- `2`: `C2_DIRECTION_DISTANCE`
+- `3`: `C3_FULL_SCENE_TOKEN`
+- `4`: `C4_SELECTED_SCENE_TOKEN`
+- `5`: `DIRECTION_ONLY` optional ablation
+- `6`: `DIRECTION_DISTANCE_SPEAKING` optional ablation
 
 ### Experiment Session
 
@@ -122,7 +123,7 @@ components wired correctly.
 
 ## Rendering Conditions
 
-### Condition 1: TRADITIONAL
+### Condition 1: C1_TRADITIONAL
 
 Uses original object positions.
 
@@ -130,7 +131,7 @@ Purpose:
 
 - Baseline spatial audio rendering.
 
-### Condition 2: DIRECTION_DISTANCE
+### Condition 2: C2_DIRECTION_DISTANCE
 
 Uses quantized direction and distance.
 
@@ -138,13 +139,22 @@ Purpose:
 
 - Spatial audio baseline using listener-relative direction and distance.
 
-### Condition 3: FULL_SCENE_TOKEN
+### Condition 3: C3_FULL_SCENE_TOKEN
 
 Uses direction, distance, speaking state, turn state, and semantic token.
 
 Purpose:
 
 - Tests the full proposed Scene Token representation.
+
+### Condition 4: C4_SELECTED_SCENE_TOKEN
+
+Uses the full Scene Token representation with priority-based token selection.
+
+Purpose:
+
+- Tests whether semantic selection can keep important utterances while reducing
+  transmitted token volume.
 
 ### Optional Ablation Conditions
 
@@ -255,12 +265,27 @@ Purpose:
 - Tracks condition changes.
 - Tracks scripted conversation start/stop.
 
+### Packet Logs
+
+File pattern:
+
+```text
+scene_packets_<timestamp>.csv
+```
+
+Purpose:
+
+- Tracks the generated token count and selected token count per packet.
+- Tracks dropped tokens, important-token retention, and estimated packet bytes.
+- Supports the secondary communication-cost analysis.
+
 ## Log Analysis
 
 Run:
 
 ```bash
 python Tools/analyze_scene_token_logs.py <metrics_csv_or_log_directory>
+python Tools/analyze_scene_packet_logs.py <scene_packets_csv_or_log_directory>
 python Tools/analyze_token_logs.py <scene_tokens_csv_or_log_directory>
 python Tools/analyze_event_logs.py <scene_token_events_csv_or_log_directory>
 python Tools/summarize_experiment_run.py <log_directory> [summary.md]
@@ -311,20 +336,30 @@ The event script summarizes:
 - average response latency for direction and speaker responses
 - response-log quality checks
 
+The packet script summarizes:
+
+- packets per second
+- estimated bytes per second
+- selected tokens per packet
+- token drop ratio
+- important-token kept ratio
+
 The summary script writes a Markdown report with:
 
 - quality checks
 - token summary
 - response accuracy and latency
 - communication metrics
+- packet metrics
 - weekly-report draft text
 
 ## Data Quality Checklist
 
 Before treating a run as valid, confirm:
 
-- all three main conditions appear in the metrics CSV:
-  `TRADITIONAL`, `DIRECTION_DISTANCE`, `FULL_SCENE_TOKEN`
+- all planned conditions appear in the metrics CSV:
+  `C1_TRADITIONAL`, `C2_DIRECTION_DISTANCE`, `C3_FULL_SCENE_TOKEN`,
+  and optionally `C4_SELECTED_SCENE_TOKEN`
 - event log includes `session_start`
 - event log includes `trial_start`
 - event log includes `trial_stop`
@@ -337,6 +372,7 @@ Before treating a run as valid, confirm:
 - event log contains at least one `response_speaker` row if speaker responses were collected
 - response rows include `expected`, `isCorrect`, `ambiguous`, and `responseLatency` fields
 - HUD condition matches the intended condition
+- packet log is present when evaluating communication selection
 
 ## Planned User Study Metrics
 

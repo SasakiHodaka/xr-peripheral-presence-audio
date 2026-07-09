@@ -7,6 +7,7 @@ LOG_PATTERNS = [
     "scene_tokens_*.csv",
     "scene_token_events_*.csv",
     "scene_token_metrics_*.csv",
+    "scene_packets_*.csv",
 ]
 
 

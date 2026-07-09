@@ -21,6 +21,13 @@ EXPECTED_SCRIPTED_SEMANTICS = {
     "AGREEMENT",
 }
 
+CONDITION_ALIASES = {
+    "TRADITIONAL": "C1_TRADITIONAL",
+    "DIRECTION_DISTANCE": "C2_DIRECTION_DISTANCE",
+    "FULL_SCENE_TOKEN": "C3_FULL_SCENE_TOKEN",
+    "SELECTED_SCENE_TOKEN": "C4_SELECTED_SCENE_TOKEN",
+}
+
 
 def safe_float(value, default=0.0):
     try:
@@ -49,6 +56,11 @@ def parse_payload(value):
         key, item_value = part.split("=", 1)
         result[key] = item_value
     return result
+
+
+def normalize_condition(value):
+    condition = value or "(none)"
+    return CONDITION_ALIASES.get(condition, condition)
 
 
 def most_common(counter):
@@ -107,7 +119,7 @@ def collect_token_stats(root):
         with path.open(newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
-                condition = row.get("condition", "") or "(none)"
+                condition = normalize_condition(row.get("condition", ""))
                 item = stats[condition]
                 item["rows"] += 1
 
@@ -162,7 +174,7 @@ def collect_metric_stats(root):
         with path.open(newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
-                condition = row.get("condition", "") or "(none)"
+                condition = normalize_condition(row.get("condition", ""))
                 for field in (
                     "tokenCount",
                     "selectedTokenCount",
@@ -210,7 +222,7 @@ def collect_event_stats(root):
             for row in reader:
                 event_type = row.get("eventType", "")
                 payload = parse_payload(row.get("value", ""))
-                condition = payload.get("condition", "(none)")
+                condition = normalize_condition(payload.get("condition", "(none)"))
                 item = stats[condition]
                 item["events"] += 1
                 item["event_types"][event_type] += 1
@@ -267,7 +279,7 @@ def collect_packet_stats(root):
         with path.open(newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
-                condition = row.get("condition", "") or "(none)"
+                condition = normalize_condition(row.get("condition", ""))
                 item = stats[condition]
                 item["packets"] += 1
 
@@ -339,7 +351,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
     total_token_rows = sum(item["rows"] for item in token_stats.values())
     total_direction_responses = sum(item["direction_responses"] for item in event_stats.values())
     total_speaker_responses = sum(item["speaker_responses"] for item in event_stats.values())
-    main_conditions = [condition for condition in EXPECTED_CONDITIONS if condition in token_stats or condition in metric_stats]
+    main_conditions = [condition for condition in EXPECTED_CONDITIONS if condition in token_stats or condition in metric_stats or condition in packet_stats]
     condition_text = ", ".join(main_conditions) if main_conditions else "none"
     has_participant_responses = total_direction_responses > 0 and total_speaker_responses > 0
 
@@ -529,6 +541,7 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
                 has_participant_responses,
                 total_direction_responses,
                 total_speaker_responses,
+                condition_text,
             ),
             "",
         ]
@@ -536,12 +549,12 @@ def render_markdown(root, token_files, token_stats, metric_files, metric_stats, 
     return "\n".join(lines)
 
 
-def render_weekly_response_paragraph(has_participant_responses, total_direction_responses, total_speaker_responses):
+def render_weekly_response_paragraph(has_participant_responses, total_direction_responses, total_speaker_responses, condition_text):
     if has_participant_responses:
         return (
             "\u53c2\u52a0\u8005\u5fdc\u7b54\u306b\u3064\u3044\u3066\u3082\u3001"
             f"Direction response \u3092 {total_direction_responses} \u4ef6\u3001Speaker response \u3092 {total_speaker_responses} \u4ef6\u8a18\u9332\u3067\u304d\u305f\u3002"
-            "\u3053\u308c\u306b\u3088\u308a\u3001C1_TRADITIONAL\u3001C2_DIRECTION_DISTANCE\u3001C3_FULL_SCENE_TOKEN\u3001C4_SELECTED_SCENE_TOKEN \u306e 4 \u6761\u4ef6\u306b\u3064\u3044\u3066\u3001"
+            f"\u3053\u308c\u306b\u3088\u308a\u3001{condition_text} \u306e\u6761\u4ef6\u306b\u3064\u3044\u3066\u3001"
             "\u65b9\u5411\u56de\u7b54\u7cbe\u5ea6\u3001\u8a71\u8005\u56de\u7b54\u7cbe\u5ea6\u3001\u53cd\u5fdc\u6642\u9593\u3092\u6761\u4ef6\u3054\u3068\u306b\u96c6\u8a08\u3067\u304d\u308b\u72b6\u614b\u306b\u306a\u3063\u305f\u3002"
             "\u4e00\u65b9\u3067\u3001\u4e00\u90e8\u306e\u5fdc\u7b54\u306f\u767a\u8a71\u8005\u304c\u660e\u78ba\u3067\u306a\u3044\u6642\u70b9\u306b\u884c\u308f\u308c\u305f\u305f\u3081 ambiguous \u3068\u3057\u3066\u8a18\u9332\u3055\u308c\u305f\u3002"
             "\u6b21\u306e\u30d1\u30a4\u30ed\u30c3\u30c8\u3067\u306f\u3001HUD \u4e0a\u306e\u5fdc\u7b54\u30bf\u30a4\u30df\u30f3\u30b0\u8868\u793a\u3084\u6307\u793a\u6587\u3092\u6539\u5584\u3057\u3001"
@@ -582,3 +595,4 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

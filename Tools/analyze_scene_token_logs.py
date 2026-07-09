@@ -26,6 +26,18 @@ SELECTION_KEYS = (
     "selectionSavingsRatio",
 )
 
+CONDITION_ALIASES = {
+    "TRADITIONAL": "C1_TRADITIONAL",
+    "DIRECTION_DISTANCE": "C2_DIRECTION_DISTANCE",
+    "FULL_SCENE_TOKEN": "C3_FULL_SCENE_TOKEN",
+    "SELECTED_SCENE_TOKEN": "C4_SELECTED_SCENE_TOKEN",
+}
+
+
+def normalize_condition(value):
+    condition = value or "(none)"
+    return CONDITION_ALIASES.get(condition, condition)
+
 
 def main():
     if len(sys.argv) != 2:
@@ -44,7 +56,7 @@ def main():
         with path.open(newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
-                condition = row.get("condition", "")
+                condition = normalize_condition(row.get("condition", ""))
                 if not condition:
                     continue
                 for key in BASE_KEYS + SELECTION_KEYS:

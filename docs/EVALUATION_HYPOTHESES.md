@@ -2,10 +2,28 @@
 
 This document defines what the Semantic Spatial Audio / Scene Token evaluation should test. The main goal is to evaluate Scene Token as a discrete scene representation that supports conversation understanding, not merely as position metadata.
 
-## Research Question
+## Research Questions
 
 ```text
 In multi-speaker VR conversations, can Scene Tokens that integrate spatial information and conversation state improve speaker awareness, direction awareness, and conversation understanding compared with conventional spatial audio presentation?
+```
+
+The evaluation is organized into four research questions.
+
+| RQ | Question | Main module | Main evaluation |
+| --- | --- | --- | --- |
+| RQ1 | Communication Efficiency: can Scene Token selection and packetization reduce communication metadata while preserving important tokens? | Selection Function + Communication Layer | `PacketBytes`, `DropRatio` |
+| RQ2 | Perceptual Performance: can Scene Token rendering preserve direction and active-speaker perception? | Scene Analysis + Scene Representation + Rendering + Evaluation Layer | `DirectionAccuracy`, `SpeakerAccuracy` |
+| RQ3 | Cognitive Performance: can semantic and turn-state tokens improve objective situation understanding? | Full Scene Token + Rendering Layer | `SituationUnderstanding`, `ResponseTime` |
+| RQ4 | User Experience: does semantic spatial rendering preserve acceptable subjective experience? | Rendering Layer + Evaluation Layer | NASA-TLX, naturalness, ease of following |
+
+The thesis structure should present these RQs through four layers:
+
+```text
+Research Layer: what the method represents
+Implementation Layer: how Unity realizes it
+Logging Layer: what data is recorded
+Evaluation Layer: how RQs and hypotheses are tested
 ```
 
 ## Main Evaluation Conditions
@@ -14,25 +32,91 @@ The first user study should use three main conditions.
 
 | Condition | Implementation name | Included information | Purpose |
 | --- | --- | --- | --- |
-| C1 | `TRADITIONAL` | original object position | baseline spatial audio |
-| C2 | `DIRECTION_DISTANCE` | quantized direction + distance | spatial metadata only |
-| C3 | `FULL_SCENE_TOKEN` | direction + distance + speaking + turn + semantic token | proposed semantic scene representation |
+| C1 | `C1_TRADITIONAL` | original object position | baseline spatial audio |
+| C2 | `C2_DIRECTION_DISTANCE` | quantized direction + distance | spatial metadata only |
+| C3 | `C3_FULL_SCENE_TOKEN` | direction + distance + speaking + turn + semantic token | proposed semantic scene representation |
 
 `DIRECTION_ONLY` and `DIRECTION_DISTANCE_SPEAKING` remain useful for development checks and later ablation analysis, but they are not required for the first main user study.
 
+## Representative Metrics
+
+The evaluation chapter should use one small set of representative metrics.
+
+| RQ | Representative metrics | Evaluation type |
+| --- | --- | --- |
+| RQ1 Communication Efficiency | `PacketBytes`, `DropRatio`, `ImportantTokenKeptRatio`, `TokensPerPacket` | objective communication metrics |
+| RQ2 Perceptual Performance | `DirectionAccuracy`, `SpeakerAccuracy`, `ResponseLatency` | objective perceptual metrics |
+| RQ3 Cognitive Performance | `SituationUnderstanding`, `ResponseTime`, overlap recognition, important-utterance recognition | objective cognitive metrics |
+| RQ4 User Experience | NASA-TLX, naturalness, ease of following, annoyance/distraction | subjective user-experience metrics |
+
+RQ3 should be treated as objective cognitive evaluation. RQ4 should be treated
+as subjective user-experience evaluation.
+
+## Experimental Variable Structure
+
+Selection is not only an RQ1 communication mechanism. It is also an independent
+variable that can indirectly affect RQ2 and RQ3 through rendering.
+
+```text
+Independent variable:
+  Selection method / rendering condition
+
+Dependent variables:
+  PacketBytes
+  DirectionAccuracy
+  SpeakerAccuracy
+  SituationUnderstanding
+  NASA-TLX
+  Naturalness
+```
+
+The overall evaluation logic is:
+
+```text
+Proposed Method
+
+Scene Analysis
+  -> Scene Token
+  -> Selection Function
+  -> Scene Packet
+  -> Rendering
+
+Evaluation
+
+Communication
+  -> PacketBytes
+
+Perception
+  -> DirectionAccuracy
+  -> SpeakerAccuracy
+
+Situation Awareness
+  -> Understanding
+  -> ResponseTime
+
+User Experience
+  -> NASA-TLX
+  -> Naturalness
+  -> Ease of Following
+```
+
 ## Hypothesis 1: Speaker Localization
+
+Corresponding RQ:
+
+- RQ2
 
 Hypothesis:
 
 ```text
-DIRECTION_DISTANCE improves direction response accuracy and reduces direction response latency compared with TRADITIONAL.
+C2_DIRECTION_DISTANCE improves direction response accuracy and reduces direction response latency compared with C1_TRADITIONAL.
 ```
 
 Comparison:
 
-- `TRADITIONAL`
-- `DIRECTION_DISTANCE`
-- `FULL_SCENE_TOKEN`
+- `C1_TRADITIONAL`
+- `C2_DIRECTION_DISTANCE`
+- `C3_FULL_SCENE_TOKEN`
 
 Metrics:
 
@@ -52,17 +136,21 @@ Required log fields:
 
 ## Hypothesis 2: Active Speaker Identification
 
+Corresponding RQ:
+
+- RQ2
+
 Hypothesis:
 
 ```text
-FULL_SCENE_TOKEN improves active-speaker identification accuracy and reduces speaker response latency compared with spatial-metadata-only rendering.
+C3_FULL_SCENE_TOKEN improves active-speaker identification accuracy and reduces speaker response latency compared with spatial-metadata-only rendering.
 ```
 
 Comparison:
 
-- `TRADITIONAL`
-- `DIRECTION_DISTANCE`
-- `FULL_SCENE_TOKEN`
+- `C1_TRADITIONAL`
+- `C2_DIRECTION_DISTANCE`
+- `C3_FULL_SCENE_TOKEN`
 
 Metrics:
 
@@ -84,16 +172,20 @@ Required log fields:
 
 ## Hypothesis 3: Conversation Understanding
 
+Corresponding RQ:
+
+- RQ3
+
 Hypothesis:
 
 ```text
-FULL_SCENE_TOKEN improves understanding of conversation flow, important utterances, and overlap compared with DIRECTION_DISTANCE.
+C3_FULL_SCENE_TOKEN improves understanding of conversation flow, important utterances, and overlap compared with C2_DIRECTION_DISTANCE.
 ```
 
 Comparison:
 
-- `DIRECTION_DISTANCE`
-- `FULL_SCENE_TOKEN`
+- `C2_DIRECTION_DISTANCE`
+- `C3_FULL_SCENE_TOKEN`
 
 Metrics:
 
@@ -112,10 +204,14 @@ Example comprehension questions:
 
 ## Hypothesis 4: Workload and Naturalness
 
+Corresponding RQ:
+
+- RQ4
+
 Hypothesis:
 
 ```text
-FULL_SCENE_TOKEN supports conversation understanding without substantially increasing workload or unnaturalness, as long as volume and pitch emphasis remain moderate.
+C3_FULL_SCENE_TOKEN supports conversation understanding without substantially increasing workload or unnaturalness, as long as volume and pitch emphasis remain moderate.
 ```
 
 Metrics:
@@ -129,17 +225,22 @@ Metrics:
 Risk:
 
 ```text
-If semantic emphasis is too strong, FULL_SCENE_TOKEN may feel unnatural or distracting. The first study should use light emphasis and evaluate this explicitly.
+If semantic emphasis is too strong, C3_FULL_SCENE_TOKEN may feel unnatural or distracting. The first study should use light emphasis and evaluate this explicitly.
 ```
 
-## Secondary Analysis: Communication Metadata Volume
+## Communication Metadata Volume
 
-Communication volume is a secondary analysis. The central claim should remain conversation understanding support, not proven bandwidth reduction.
+Corresponding RQ:
+
+- RQ1
+
+Communication volume evaluates whether Scene Token can work as a compact
+communication representation while preserving important semantic tokens.
 
 Hypothesis:
 
 ```text
-Scene Token can represent scene state as compact discrete metadata compared with richer object-level metadata, but this should be reported as supporting evidence rather than the main contribution.
+Scene Token selection and packetization reduce transmitted metadata while keeping important semantic tokens.
 ```
 
 Metrics:
@@ -150,6 +251,7 @@ Metrics:
 - object metadata bytes per second
 - compact savings ratio
 - token selection metrics when enabled
+- packet bytes and packet rate
 
 Required log fields:
 
@@ -163,6 +265,10 @@ Required log fields:
 - `tokenDropRatio`
 - `importantTokenSendRatio`
 - `selectionSavingsRatio`
+- `estimatedBytes`
+- `payloadBytes`
+- `packetsPerSecond`
+- `tokensPerPacket`
 
 ## Minimum Valid Evaluation Output
 
@@ -176,6 +282,7 @@ A minimum pilot evaluation should produce:
 - subjective rating by condition
 - NASA-TLX short-form results
 - communication metrics by condition
+- packet metrics by condition
 
 ## Discussion Targets
 

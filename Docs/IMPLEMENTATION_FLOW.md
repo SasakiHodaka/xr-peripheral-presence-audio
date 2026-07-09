@@ -17,11 +17,104 @@ SpeakerObject state
   -> spatial and conversation analyzers
   -> SceneToken data model
   -> optional token selection
-  -> token logging and communication metrics
+  -> ScenePacket construction
+  -> token, packet, and metrics logging
   -> SceneTokenDecoderRenderer
   -> AudioSource position, volume, and pitch
   -> spatial audio output
 ```
+
+## 0. Four-Layer Research Structure
+
+For thesis writing, the system should be explained as four layers rather than
+as a list of Unity classes.
+
+```text
+Research Layer
+  -> Implementation Layer
+  -> Logging Layer
+  -> Evaluation Layer
+```
+
+This keeps the proposed method visible before implementation details.
+
+| Layer | Thesis role | Main elements | Output |
+| --- | --- | --- | --- |
+| Research Layer | Defines the proposed method | Scene Analysis, Scene Representation, Selection, Communication, Rendering | conceptual pipeline and hypotheses |
+| Implementation Layer | Implements the method in Unity | speaker state, token generation, selection, packetization, rendering | runtime behavior under C1-C4 |
+| Logging Layer | Records evaluation data | token logs, event logs, metrics logs, packet logs | CSV data |
+| Evaluation Layer | Tests the research questions | analysis, statistics, visualization, paper results | RQ/Hypothesis evidence |
+
+Layer 1 is the algorithmic contribution. Layer 2 is the Unity realization.
+Layer 3 makes the experiment reproducible. Layer 4 connects the implementation
+to research evidence.
+
+Implementation Layer is divided into concrete runtime steps:
+
+| Implementation step | Unity implementation | Research role |
+| --- | --- | --- |
+| Input Acquisition | `SpeakerObject`, `SceneTokenScriptedConversation` | acquires speaker state, semantic label, urgency, target object, and utterance text |
+| Scene Analysis | `SceneTokenManager`, `DirectionAnalyzer`, `DistanceAnalyzer`, `ConversationAnalyzer` | extracts spatial state and conversation state from the current scene |
+| Scene Representation | `SceneToken` | stores the discrete scene representation used by rendering and evaluation |
+| Selection Function | `ImportanceCalculator`, `TokenSelector` | computes importance and decides whether each token should be transmitted |
+| Communication Unit | `ScenePacket`, `ScenePacketizer` | summarizes selected tokens as a packet-level communication unit |
+| Rendering | `SceneTokenDecoderRenderer` | reconstructs semantic spatial audio from tokens |
+| Experiment Control | `SceneTokenExperimentSession`, `SceneTokenConditionController` | controls condition order, trials, timing, and participant responses |
+
+Evaluation Layer is divided into analysis steps:
+
+| Evaluation step | Artifact or tool | Research role |
+| --- | --- | --- |
+| Log | token, event, metrics, packet, questionnaire CSV | preserves raw experiment data |
+| Analysis | `Tools/*.py`, `summary.md` | computes condition summaries, response accuracy, latency, and communication metrics |
+| Statistics | statistical test scripts or notebook | tests RQ and hypothesis differences across conditions |
+| Visualization | figures and tables | communicates condition effects and error patterns |
+| Paper | thesis figures, tables, and result text | turns analysis into research evidence |
+
+## 0.1 Research-to-Implementation Map
+
+This table bridges the thesis modules, Unity implementation, logging, and RQ
+evaluation without making Unity class names the main research structure.
+
+| Research module | Unity implementation | Research evidence | RQ |
+| --- | --- | --- | --- |
+| Input Acquisition | `SpeakerObject`, `SceneTokenScriptedConversation` | ground-truth speaker state, semantic labels, utterance timing | RQ2, RQ3 |
+| Scene Analysis | `SceneTokenManager`, `DirectionAnalyzer`, `DistanceAnalyzer`, `ConversationAnalyzer` | extracted `direction`, `distance`, `speakingState`, `turnState`; direction/distance consistency | RQ2 |
+| Scene Representation | `SceneToken` | token CSV, semantic-token coverage, turn/overlap labels, utterance metadata | RQ2, RQ3 |
+| Selection Function | `ImportanceCalculator`, `TokenSelector` | `dropRatio`, `importantTokenKeptRatio`, selected-token ratio, selection reason | RQ1 |
+| Communication Layer | `ScenePacket`, `ScenePacketizer` | packet bytes, payload bytes, packets/s, tokens/packet | RQ1 |
+| Rendering Layer | `SceneTokenDecoderRenderer` | perceptual cues under full and selected-token rendering; direction/speaker accuracy, comprehension, and user ratings | RQ1, RQ2, RQ3, RQ4 |
+| Evaluation Layer | loggers, analysis scripts, statistics, figures | direction accuracy, speaker accuracy, response latency, comprehension score, workload, naturalness | RQ1, RQ2, RQ3, RQ4 |
+
+The final thesis should use this table to explain not only which component was
+implemented, but which research question each component provides evidence for.
+
+Two flows should be kept separate when explaining the system.
+
+Runtime flow:
+
+```text
+Input Acquisition
+  -> Scene Analysis
+  -> Scene Representation
+  -> Selection
+  -> Communication Unit
+  -> Rendering
+```
+
+Research flow:
+
+```text
+Scene Analysis
+  -> Scene Representation
+  -> Selection
+  -> Communication
+  -> Rendering / Perception
+  -> Situation Awareness
+```
+
+The runtime flow explains how Unity runs. The research flow explains what the
+thesis evaluates.
 
 ## 1. Runtime Entry Point
 
@@ -44,7 +137,8 @@ by `tokenUpdateInterval`. When the interval has elapsed, it calls
 5. Write token logs when experiment logging is enabled.
 6. Send selected tokens to the renderer.
 7. Send generated and selected token lists to the metrics logger.
-8. Update response-window events for participant response logging.
+8. Build and write a `ScenePacket` summary row.
+9. Update response-window events for participant response logging.
 
 This design keeps token generation centralized. That is important because
 turn-taking state cannot be decided from a single avatar alone. The manager must
@@ -248,7 +342,7 @@ Token selection is controlled by:
 
 ```text
 SceneTokenManager.enableTokenSelection
-SceneTokenManager.minimumTransmissionPriority
+SceneTokenManager.minimumTransmissionImportance
 ```
 
 When selection is disabled, all generated tokens are treated as transmitted.
@@ -261,7 +355,42 @@ When selection is enabled:
 
 The token records why it was selected or dropped through `selectionReason`.
 
-## 7. Rendering Conditions
+## 7. Scene Packet Construction
+
+Packet construction is implemented in:
+
+```text
+Assets/Scripts/SceneToken/ScenePacket.cs
+Assets/Scripts/SceneToken/ScenePacketizer.cs
+Assets/Scripts/SceneToken/ScenePacketLogger.cs
+```
+
+After token selection, `SceneTokenManager.GenerateTokens()` builds one
+`ScenePacket` for the current sample when experiment logging is enabled. The
+packet is not a real network transport yet. It is an analyzable communication
+unit that summarizes what would be sent at that sample.
+
+Each packet records:
+
+- packet id and sequence number
+- sender and receiver ids
+- session, participant, trial, condition, and trial elapsed time
+- send reason: `full_scene_packet` or `selected_scene_packet`
+- generated token count
+- selected token count
+- dropped token count
+- important token count
+- important tokens kept
+- packet importance and priority
+- estimated header, payload, and total bytes
+- drop ratio
+- important-token kept ratio
+
+`ScenePacketizer` estimates packet payload bytes from the compact byte estimate
+stored on each selected token. `ScenePacketLogger` writes
+`scene_packets_*.csv` and flushes pending rows periodically.
+
+## 8. Rendering Conditions
 
 Token rendering is implemented in:
 
@@ -278,9 +407,10 @@ It controls:
 - AudioSource volume
 - AudioSource pitch
 
-The renderer supports five experiment conditions.
+The renderer supports four main study conditions plus two development
+ablations.
 
-### 1. TRADITIONAL
+### 1. C1_TRADITIONAL
 
 The AudioSource position stays at the original speaker object position.
 
@@ -288,16 +418,7 @@ Purpose:
 
 - baseline object-position spatial audio
 
-### 2. DIRECTION_ONLY
-
-The AudioSource direction is reconstructed from the quantized direction token.
-Distance is fixed to the middle radius.
-
-Purpose:
-
-- isolate the effect of direction tokenization
-
-### 3. DIRECTION_DISTANCE
+### 2. C2_DIRECTION_DISTANCE
 
 Direction and distance are both reconstructed from discrete tokens.
 
@@ -305,19 +426,30 @@ Purpose:
 
 - evaluate direction plus near/mid/far distance representation
 
-### 4. DIRECTION_DISTANCE_SPEAKING
-
-Direction and distance are reconstructed, and silent speakers are suppressed by
-setting volume to zero.
-
-Purpose:
-
-- evaluate the value of explicitly representing speaking state
-
-### 5. FULL_SCENE_TOKEN
+### 3. C3_FULL_SCENE_TOKEN
 
 The full token is used. Direction, distance, speaking state, turn state,
 semantic token, and urgency all affect the output.
+
+Purpose:
+
+- evaluate the proposed semantic spatial audio representation
+
+### 4. C4_SELECTED_SCENE_TOKEN
+
+Priority-based selection is enabled through the rendering condition. Low
+importance tokens can be dropped, and only selected tokens drive rendering.
+
+Purpose:
+
+- evaluate semantic token selection and its communication-cost effect
+
+### Development ablations
+
+The implementation still keeps these conditions for development checks:
+
+- `DIRECTION_ONLY`
+- `DIRECTION_DISTANCE_SPEAKING`
 
 Additional full-token mappings:
 
@@ -333,9 +465,10 @@ Additional full-token mappings:
 | `urgency = HIGH` | volume boost |
 | `urgency = CRITICAL` | stronger volume and pitch boost |
 
-This condition is the implemented semantic spatial audio condition.
+`C3_FULL_SCENE_TOKEN` and `C4_SELECTED_SCENE_TOKEN` both use the full-token
+rendering mappings.
 
-## 8. Condition Control
+## 9. Condition Control
 
 Condition switching is implemented in:
 
@@ -347,18 +480,19 @@ Keyboard controls:
 
 | Key | Condition |
 | --- | --- |
-| `1` | `TRADITIONAL` |
-| `2` | `DIRECTION_DISTANCE` |
-| `3` | `FULL_SCENE_TOKEN` |
-| `4` | `DIRECTION_ONLY` |
-| `5` | `DIRECTION_DISTANCE_SPEAKING` |
+| `1` | `C1_TRADITIONAL` |
+| `2` | `C2_DIRECTION_DISTANCE` |
+| `3` | `C3_FULL_SCENE_TOKEN` |
+| `4` | `C4_SELECTED_SCENE_TOKEN` |
+| `5` | `DIRECTION_ONLY` |
+| `6` | `DIRECTION_DISTANCE_SPEAKING` |
 
 The experiment session can also advance conditions according to its configured
 condition order.
 
 Condition changes are written to the event log through `SceneTokenEventLogger`.
 
-## 9. Experiment Session Flow
+## 10. Experiment Session Flow
 
 Experiment control is implemented in:
 
@@ -387,7 +521,7 @@ When this flag is enabled, token and metric rows are written only while
 `SceneTokenExperimentSession.IsRunning` is true. This avoids mixing setup or
 debug interaction with experiment data.
 
-## 10. Scripted Conversation
+## 11. Scripted Conversation
 
 Repeatable conversation playback is implemented in:
 
@@ -409,7 +543,7 @@ This makes trials repeatable across rendering conditions. The same conversation
 sequence can be played under baseline spatial audio and full Scene Token
 rendering, which is required for a controlled comparison.
 
-## 11. Participant Response Logging
+## 12. Participant Response Logging
 
 Participant response recording is split between:
 
@@ -446,7 +580,7 @@ When a response is recorded, the system attaches:
 Responses are marked ambiguous when there is no active speaker or when multiple
 speakers overlap.
 
-## 12. Logging Outputs
+## 13. Logging Outputs
 
 Token logs:
 
@@ -496,7 +630,44 @@ These metrics are communication-cost estimates. They are useful for comparing
 representation strategies, but they are not yet a real network bitrate
 measurement.
 
-## 13. Validation Tools
+Packet logs:
+
+```text
+Assets/Scripts/SceneToken/ScenePacketLogger.cs
+```
+
+Packet rows include sequence number, packet metadata, generated and selected
+token counts, dropped-token count, important-token retention, estimated bytes,
+drop ratio, and important-token kept ratio.
+
+## 14. Analysis Tools
+
+Latest-run collection:
+
+```text
+Tools/collect_latest_scene_token_run.py
+```
+
+This copies the newest token, event, metrics, and packet CSV files from Unity's
+log directory into a run directory.
+
+Condition-level analyzers:
+
+```text
+Tools/analyze_token_logs.py
+Tools/analyze_event_logs.py
+Tools/analyze_scene_token_logs.py
+Tools/analyze_scene_packet_logs.py
+Tools/summarize_experiment_run.py
+```
+
+The analyzers normalize old condition names such as `TRADITIONAL` to the
+current `C1_TRADITIONAL` form so older representative runs remain usable.
+
+`summarize_experiment_run.py` combines token, response, communication, and
+packet summaries into one Markdown report.
+
+## 15. Validation Tools
 
 Analyzer self-check:
 
@@ -538,6 +709,8 @@ This validates the mock scene wiring:
 - token logger
 - event logger
 - metrics logger
+- packetizer
+- packet logger
 - condition controller
 - experiment session
 - scripted conversation
@@ -546,7 +719,7 @@ This validates the mock scene wiring:
 - three debug labels
 - required speaker key bindings
 
-## 14. Current Implementation Boundary
+## 16. Current Implementation Boundary
 
 The current prototype implements a controlled, rule-based Scene Token pipeline.
 It does not yet implement:
@@ -564,7 +737,7 @@ evaluate whether explicit scene tokens can improve multi-speaker spatial
 conversation awareness before adding automatic extraction or real network
 transport.
 
-## 15. Research Mapping
+## 17. Research Mapping
 
 The implemented system maps to the research claim as follows:
 
@@ -581,14 +754,47 @@ Meaning / turn state
 Scene Token
   -> SceneToken data model
 
+Communication unit
+  -> ScenePacket
+
 Semantic spatial audio rendering
   -> SceneTokenDecoderRenderer FULL_SCENE_TOKEN condition
 
 Evaluation data
-  -> token logs + event logs + response logs + metrics logs
+  -> token logs + event logs + response logs + metrics logs + packet logs
 ```
 
 The key technical contribution in this prototype is not simply playing spatial
 audio. It is the explicit conversion of a multi-speaker conversation scene into
 a token representation that can drive controlled rendering conditions and
 produce analyzable experiment logs.
+
+## 18. Evaluation Flow
+
+The implementation is not complete as an evaluation system until logs are
+converted into analyzable results.
+
+```text
+Scenario utterance
+  -> SceneToken
+  -> ScenePacket
+  -> CSV logs
+  -> Python analyzers
+  -> summary.md
+  -> experiment result
+  -> statistics
+```
+
+The next implementation priority is therefore not adding more rendering
+classes. It is fixing the experiment data contract:
+
+```text
+Scenario A/B/C
+  -> ground truth labels
+  -> evaluation fields
+  -> CSV columns
+  -> analyzer outputs
+```
+
+This prevents the main evaluation failure mode: running a pilot and then
+discovering that an important value was never logged.

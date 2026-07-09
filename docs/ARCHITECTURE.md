@@ -470,7 +470,7 @@ SceneTokenManager response HUD / keys
 
 ## Render Conditions
 
-### 1. TRADITIONAL
+### 1. C1_TRADITIONAL
 
 Uses the original speaker object positions.
 
@@ -478,15 +478,7 @@ Purpose:
 
 - Baseline spatial audio/object-position condition.
 
-### 2. DIRECTION_ONLY
-
-Uses quantized direction with a fixed middle radius.
-
-Purpose:
-
-- Tests the effect of direction tokenization alone.
-
-### 3. DIRECTION_DISTANCE
+### 2. C2_DIRECTION_DISTANCE
 
 Uses quantized direction and quantized distance.
 
@@ -494,21 +486,27 @@ Purpose:
 
 - Tests the effect of adding distance tokenization.
 
-### 4. DIRECTION_DISTANCE_SPEAKING
-
-Adds speaking-state gating to suppress silent speakers.
-
-Purpose:
-
-- Tests the effect of explicitly representing who is speaking.
-
-### 5. FULL_SCENE_TOKEN
+### 3. C3_FULL_SCENE_TOKEN
 
 Adds turn-state and semantic-token modulation.
 
 Purpose:
 
 - Tests the full proposed representation.
+
+### 4. C4_SELECTED_SCENE_TOKEN
+
+Adds priority-based Scene Token selection on top of the full representation.
+
+Purpose:
+
+- Tests whether semantic selection can preserve important utterances while
+  reducing transmitted token volume.
+
+### Development Ablations
+
+The implementation also keeps `DIRECTION_ONLY` and
+`DIRECTION_DISTANCE_SPEAKING` for development checks.
 
 ## What This Prototype Does Not Implement
 

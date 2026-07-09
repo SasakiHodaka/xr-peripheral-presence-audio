@@ -62,6 +62,7 @@ The mock scene currently supports:
 - `docs/RESEARCH_STORY_FORMAT.md`: basic thesis and presentation story format
 - `docs/RESEARCH_STORY_BRIEF.md`: short research story for slide planning
 - `docs/EXPERIMENT_PROTOCOL.md`: how to run a trial and collect logs
+- `docs/EVALUATION_DATA_SPEC.md`: scenario ground truth and evaluation CSV contract
 - `docs/ARCHITECTURE.md`: script responsibilities and data flow
 - `Docs/IMPLEMENTATION_FLOW.md`: detailed runtime implementation flow
 - `docs/SCENE_TOKEN_SPEC.md`: research definition, token fields, and design rationale
@@ -92,6 +93,7 @@ Run:
 python Tools/check_latest_response_run.py <unity_log_directory>
 python Tools/collect_latest_scene_token_run.py <unity_log_directory> Runs/latest_run
 python Tools/analyze_scene_token_logs.py Runs/latest_run
+python Tools/analyze_scene_packet_logs.py Runs/latest_run
 python Tools/analyze_token_logs.py Runs/latest_run token_summary.csv
 python Tools/analyze_event_logs.py Runs/latest_run event_summary.csv
 python Tools/summarize_experiment_run.py Runs/latest_run summary.md

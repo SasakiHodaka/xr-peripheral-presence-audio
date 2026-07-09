@@ -15,9 +15,9 @@ Status:
 - Completed for prototype validation on 2026-07-06.
 - Representative run: `Runs/run_20260706_230957`.
 - The run includes direction and speaker responses for:
-  - `TRADITIONAL`
-  - `DIRECTION_DISTANCE`
-  - `FULL_SCENE_TOKEN`
+  - `C1_TRADITIONAL` in current naming, `TRADITIONAL` in the representative log
+  - `C2_DIRECTION_DISTANCE` in current naming, `DIRECTION_DISTANCE` in the representative log
+  - `C3_FULL_SCENE_TOKEN` in current naming, `FULL_SCENE_TOKEN` in the representative log
 
 Tasks:
 
@@ -27,9 +27,9 @@ Tasks:
 4. Press Play.
 5. Start an experiment session with `Space`.
 6. Run all three main conditions:
-   - `TRADITIONAL`
-   - `DIRECTION_DISTANCE`
-   - `FULL_SCENE_TOKEN`
+   - `C1_TRADITIONAL`
+   - `C2_DIRECTION_DISTANCE`
+   - `C3_FULL_SCENE_TOKEN`
 7. During each condition, enter at least one direction response and one speaker
    response:
    - arrow keys for `FRONT`, `RIGHT`, `BACK`, `LEFT`
@@ -40,6 +40,7 @@ Tasks:
 
 ```bash
 python Tools/analyze_scene_token_logs.py <metrics_csv_or_log_directory>
+python Tools/analyze_scene_packet_logs.py <scene_packets_csv_or_log_directory>
 python Tools/analyze_token_logs.py <scene_tokens_csv_or_log_directory> token_summary.csv
 python Tools/analyze_event_logs.py <scene_token_events_csv_or_log_directory> event_summary.csv
 python Tools/summarize_experiment_run.py <log_directory> summary.md
@@ -120,7 +121,34 @@ Deliverable:
 
 - one slide or diagram showing the research gap and proposed pipeline
 
-## Priority 4: Clean Up the Demo Scenario
+## Priority 4: Fix Evaluation Data Specification Before Scenario Runs
+
+Goal:
+
+```text
+Lock the data contract before collecting pilot data.
+```
+
+Status:
+
+- Representative metrics and RQ mapping are defined in
+  `docs/EVALUATION_HYPOTHESES.md` and `docs/EVALUATION_DATA_SPEC.md`.
+
+Tasks:
+
+1. Define Scenario A/B/C as utterance-level ground-truth rows.
+2. Confirm every scored response has an `utteranceId` or response-window target.
+3. Confirm token, event, metrics, and packet logs contain every field required
+   for scoring.
+4. Add missing Unity log fields before running a participant pilot.
+5. Treat the current design phase as closed after Scenario A/B/C and the
+   required CSV fields are fixed.
+
+Deliverable:
+
+- one fixed scenario and evaluation CSV specification
+
+## Priority 5: Clean Up the Demo Scenario
 
 Goal:
 
@@ -144,7 +172,7 @@ Deliverable:
 
 - one repeatable 30-second to 60-second three-speaker scenario
 
-## Priority 5: Prepare Evaluation Metrics
+## Priority 6: Prepare Evaluation Metrics
 
 Goal:
 
@@ -172,7 +200,7 @@ Deliverable:
 
 - experiment sheet or questionnaire draft
 
-## Priority 6: Extend Analysis Tools
+## Priority 7: Extend Analysis Tools
 
 Goal:
 
@@ -188,20 +216,24 @@ Implemented:
 4. `Tools/analyze_event_logs.py` can export a response summary CSV.
 5. `Tools/summarize_experiment_run.py` includes quality checks, speaker summaries,
    communication metrics, and a weekly-report draft.
+6. `Tools/analyze_scene_packet_logs.py` can summarize packet count, bytes,
+   token selection, and important-token retention by condition.
 
 Next validation:
 
 1. Run the tools against one real Unity log directory.
 2. Confirm that `QUESTION`, `ANSWER`, `INSTRUCTION`, `WARNING`, and `AGREEMENT`
    appear in the token log.
-3. Copy the generated weekly-report draft into the research note and edit the
+3. Confirm that `scene_packets_*.csv` is copied into `Runs/latest_run` and
+   appears in the generated `Scene Packet Metrics` summary.
+4. Copy the generated weekly-report draft into the research note and edit the
    result paragraph using the actual numbers.
 
 Deliverable:
 
 - token-level analysis output that can be copied into a weekly report
 
-## Priority 7: Improve Engineering Quality
+## Priority 8: Improve Engineering Quality
 
 Tasks:
 
@@ -216,7 +248,7 @@ Deliverable:
 
 - repeatable validation that token generation is stable
 
-## Priority 8: Future Research Extensions
+## Priority 9: Future Research Extensions
 
 Do only after the controlled baseline is stable:
 

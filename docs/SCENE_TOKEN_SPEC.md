@@ -384,8 +384,8 @@ Selection rule:
 
 - `EMERGENCY` and `CRITICAL` tokens are always transmitted.
 - `WARNING` and `INSTRUCTION` tokens are always transmitted.
-- Other speaking tokens are transmitted if their priority is above
-  `minimumTransmissionPriority`.
+- Other speaking tokens are transmitted if their importance is above
+  `minimumTransmissionImportance`.
 - Low-priority silent/listener tokens are dropped when selection is enabled.
 
 This makes communication reduction a consequence of semantic selection, rather
@@ -410,15 +410,17 @@ Current implementation:
 
 The main user study uses three conditions:
 
-1. `TRADITIONAL`
+1. `C1_TRADITIONAL`
    - Uses the original speaker object positions.
-2. `DIRECTION_DISTANCE`
+2. `C2_DIRECTION_DISTANCE`
    - Uses quantized direction and quantized distance.
-3. `FULL_SCENE_TOKEN`
+3. `C3_FULL_SCENE_TOKEN`
    - Adds turn-state and semantic-token modulation.
+4. `C4_SELECTED_SCENE_TOKEN`
+   - Adds priority-based Scene Token selection for communication analysis.
 
-These conditions compare ordinary object-based spatial audio, spatial metadata
-rendering, and the proposed semantic Scene Token rendering.
+The first user study can focus on C1 to C3. C4 is useful when evaluating the
+secondary communication-selection claim.
 
 The implementation still keeps `DIRECTION_ONLY` and
 `DIRECTION_DISTANCE_SPEAKING` as optional ablation conditions for development

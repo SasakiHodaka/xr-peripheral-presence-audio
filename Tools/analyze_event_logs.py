@@ -4,6 +4,14 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 
+CONDITION_ALIASES = {
+    "TRADITIONAL": "C1_TRADITIONAL",
+    "DIRECTION_DISTANCE": "C2_DIRECTION_DISTANCE",
+    "FULL_SCENE_TOKEN": "C3_FULL_SCENE_TOKEN",
+    "SELECTED_SCENE_TOKEN": "C4_SELECTED_SCENE_TOKEN",
+}
+
+
 def iter_event_files(target):
     if target.is_dir():
         return sorted(target.glob("scene_token_events_*.csv"))
@@ -21,6 +29,11 @@ def parse_payload(value):
         key, item_value = part.split("=", 1)
         result[key] = item_value
     return result
+
+
+def normalize_condition(value):
+    condition = value or "(none)"
+    return CONDITION_ALIASES.get(condition, condition)
 
 
 def make_stats():
@@ -50,7 +63,7 @@ def analyze_file(path, by_condition):
         for row in reader:
             event_type = row.get("eventType", "")
             payload = parse_payload(row.get("value", ""))
-            condition = payload.get("condition", "(none)")
+            condition = normalize_condition(payload.get("condition", "(none)"))
             stats = by_condition[condition]
             stats["events"] += 1
             stats["event_types"][event_type] += 1
