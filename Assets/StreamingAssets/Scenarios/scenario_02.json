@@ -1,0 +1,84 @@
+{
+  "scenarioId": "S2",
+  "description": "Speaker Tracking scenario",
+  "events": [
+    {
+      "eventId": "E01",
+      "sequence": 1,
+      "expectedTime": 1.00,
+      "speakerId": "B",
+      "speakerPosition": {
+        "x": 2.0,
+        "y": 0.0,
+        "z": 0.5
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U101",
+      "objectId": "BlueObject01",
+      "objectPosition": {
+        "x": 1.5,
+        "y": 0.5,
+        "z": 1.5
+      },
+      "taskState": "ObjectSelection",
+      "priority": 1
+    },
+    {
+      "eventId": "E02",
+      "sequence": 2,
+      "expectedTime": 2.00,
+      "speakerId": "C",
+      "speakerPosition": {
+        "x": -2.0,
+        "y": 0.0,
+        "z": 0.5
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U102",
+      "objectId": "RedObject01",
+      "objectPosition": {
+        "x": -1.5,
+        "y": 0.5,
+        "z": 1.5
+      },
+      "taskState": "ObjectSelection",
+      "priority": 1
+    },
+    {
+      "eventId": "E03",
+      "sequence": 3,
+      "expectedTime": 3.00,
+      "speakerId": "B",
+      "speakerPosition": {
+        "x": 2.0,
+        "y": 0.0,
+        "z": 0.5
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U103",
+      "objectId": "BlueObject01",
+      "objectPosition": {
+        "x": 1.5,
+        "y": 0.5,
+        "z": 1.5
+      },
+      "taskState": "ObjectSelection",
+      "priority": 1
+    }
+  ]
+}

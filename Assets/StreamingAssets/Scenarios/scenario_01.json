@@ -1,0 +1,58 @@
+{
+  "scenarioId": "S1",
+  "description": "Dynamic Direction scenario",
+  "events": [
+    {
+      "eventId": "E01",
+      "sequence": 1,
+      "expectedTime": 1.52,
+      "speakerId": "B",
+      "speakerPosition": {
+        "x": 2.1,
+        "y": 0.0,
+        "z": -1.4
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U023",
+      "objectId": "Shelf01",
+      "objectPosition": {
+        "x": 2.5,
+        "y": 0.5,
+        "z": -1.5
+      },
+      "taskState": "ObjectSearch",
+      "priority": 1
+    },
+    {
+      "eventId": "E02",
+      "sequence": 2,
+      "expectedTime": 2.34,
+      "speakerId": "B",
+      "speakerPosition": {
+        "x": -2.0,
+        "y": 0.0,
+        "z": -1.0
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U024",
+      "objectId": "Shelf01",
+      "objectPosition": {
+        "x": -2.5,
+        "y": 0.5,
+        "z": -1.5
+      },
+      "taskState": "ObjectSearch",
+      "priority": 1
+    }
+  ]
+}

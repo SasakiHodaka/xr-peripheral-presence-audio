@@ -1,0 +1,110 @@
+{
+  "scenarioId": "S3",
+  "description": "Intent Switching scenario",
+  "events": [
+    {
+      "eventId": "E01",
+      "sequence": 1,
+      "expectedTime": 1.00,
+      "speakerId": "B",
+      "speakerPosition": {
+        "x": 2.0,
+        "y": 0.0,
+        "z": 1.0
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U201",
+      "objectId": "Desk01",
+      "objectPosition": {
+        "x": 0.0,
+        "y": 0.5,
+        "z": 2.0
+      },
+      "taskState": "DeskWork",
+      "priority": 1
+    },
+    {
+      "eventId": "E02",
+      "sequence": 2,
+      "expectedTime": 2.00,
+      "speakerId": "C",
+      "speakerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -2.0
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U202",
+      "objectId": "UserA",
+      "objectPosition": {
+        "x": 0.0,
+        "y": 1.5,
+        "z": 0.0
+      },
+      "taskState": "DeskWork",
+      "priority": 2
+    },
+    {
+      "eventId": "E03",
+      "sequence": 3,
+      "expectedTime": 3.00,
+      "speakerId": "B",
+      "speakerPosition": {
+        "x": 2.0,
+        "y": 0.0,
+        "z": 1.0
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U203",
+      "objectId": "Desk01",
+      "objectPosition": {
+        "x": 0.0,
+        "y": 0.5,
+        "z": 2.0
+      },
+      "taskState": "DeskWork",
+      "priority": 1
+    },
+    {
+      "eventId": "E04",
+      "sequence": 4,
+      "expectedTime": 4.00,
+      "speakerId": "D",
+      "speakerPosition": {
+        "x": -1.0,
+        "y": 0.0,
+        "z": 1.5
+      },
+      "listenerPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "listenerRotationY": 0.0,
+      "utteranceId": "U204",
+      "objectId": "None",
+      "objectPosition": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "taskState": "DeskWork",
+      "priority": 0
+    }
+  ]
+}
