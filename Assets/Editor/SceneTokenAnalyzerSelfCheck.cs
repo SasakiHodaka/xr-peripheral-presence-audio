@@ -42,6 +42,9 @@ public static class SceneTokenAnalyzerSelfCheck
         CheckTransformAzimuth(errors);
         CheckCsvEscaping(errors);
         CheckMetricByteEstimates(errors);
+        CheckPrioritySelectionPolicy(errors);
+        CheckAdaptivePresentationPolicy(errors);
+        CheckUserAdaptation(errors);
         return errors;
     }
 
@@ -139,6 +142,218 @@ public static class SceneTokenAnalyzerSelfCheck
         if (SceneTokenMetrics.EstimateJsonBytes(token) <= SceneTokenMetrics.EstimateCompactSceneTokenBytes(token))
         {
             errors.Add("JSON byte estimate should be larger than compact scene token estimate for a populated token.");
+        }
+    }
+
+    private static void CheckPrioritySelectionPolicy(List<string> errors)
+    {
+        var policyObject = new GameObject("SelfCheckPrioritySelectionPolicy");
+
+        try
+        {
+            var policy = policyObject.AddComponent<PrioritySelectionPolicy>();
+            var lowPriority = CreateGeneratedToken("E_LOW", "Workpiece01", "WorkpieceWork", 0);
+            var normalPriority = CreateGeneratedToken("E_NORMAL", "Workpiece01", "WorkpieceWork", 1);
+            var criticalPriority = CreateGeneratedToken("E_CRITICAL", "Workpiece01", "WorkpieceWork", 2);
+            var unrelated = CreateGeneratedToken("E_UNRELATED", "OtherMachine", "WorkpieceWork", 0);
+
+            policy.SetComparisonMode(ComparisonSelectionMode.FullTransmission);
+            ExpectSelection(errors, policy.Select(lowPriority), true, CommunicationLevel.AudioAndToken,
+                "full transmission should send low-priority events with audio and token");
+
+            policy.SetComparisonMode(ComparisonSelectionMode.PriorityOnly);
+            ExpectSelection(errors, policy.Select(lowPriority), false, CommunicationLevel.None,
+                "priority-only mode should suppress priority 0");
+            ExpectSelection(errors, policy.Select(normalPriority), true, CommunicationLevel.TokenOnly,
+                "priority-only mode should send priority 1 as token only");
+            ExpectSelection(errors, policy.Select(criticalPriority), true, CommunicationLevel.AudioAndToken,
+                "priority-only mode should send priority 2 with audio and token");
+
+            policy.SetComparisonMode(ComparisonSelectionMode.ContextAndUserState);
+            policy.SetGuidanceNeed(0.8f);
+            ExpectSelection(errors, policy.Select(normalPriority), true, CommunicationLevel.TokenOnly,
+                "high guidance need should send new task-relevant procedural information");
+            ExpectSelection(errors, policy.Select(normalPriority), false, CommunicationLevel.None,
+                "proposed mode should suppress already presented target information");
+            ExpectSelection(errors, policy.Select(unrelated), false, CommunicationLevel.None,
+                "proposed mode should suppress task-irrelevant information");
+            ExpectSelection(errors, policy.Select(criticalPriority), true, CommunicationLevel.AudioAndToken,
+                "proposed mode should always send critical information even for a known target");
+
+            policy.ResetUserState();
+            ExpectSelection(errors, policy.Select(normalPriority), true, CommunicationLevel.TokenOnly,
+                "resetting user state should make target information new again");
+
+            policy.SetGuidanceNeed(0.2f);
+            SelectionResult lowNeedRoutine = policy.Select(normalPriority);
+            ExpectSelection(errors, lowNeedRoutine, false, CommunicationLevel.None,
+                "low guidance need should suppress routine procedural information");
+            if (lowNeedRoutine != null && lowNeedRoutine.totalScore >= lowNeedRoutine.decisionThreshold)
+            {
+                errors.Add("low-need routine score should remain below its decision threshold.");
+            }
+            ExpectSelection(errors, policy.Select(criticalPriority), true, CommunicationLevel.AudioAndToken,
+                "low guidance need should still receive critical information");
+
+            CheckSelectionCountDifference(errors, policy);
+        }
+        finally
+        {
+            Object.DestroyImmediate(policyObject);
+        }
+    }
+
+    private static void CheckSelectionCountDifference(
+        List<string> errors, PrioritySelectionPolicy policy)
+    {
+        var sequence = new[]
+        {
+            CreateGeneratedToken("S_ROUTINE_NEW", "Workpiece01", "WorkpieceWork", 1),
+            CreateGeneratedToken("S_ROUTINE_REPEAT", "Workpiece01", "WorkpieceWork", 1),
+            CreateGeneratedToken("S_UNRELATED", "OtherMachine", "WorkpieceWork", 0),
+            CreateGeneratedToken("S_WARNING", "Workpiece01", "WorkpieceWork", 2),
+            CreateGeneratedToken("S_RESULT", "Workpiece01", "WorkpieceWork", 2)
+        };
+
+        policy.SetGuidanceNeed(0.8f);
+        policy.SetComparisonMode(ComparisonSelectionMode.FullTransmission);
+        Expect(errors, CountSelected(policy, sequence), 5,
+            "full transmission comparison count");
+
+        policy.SetComparisonMode(ComparisonSelectionMode.PriorityOnly);
+        Expect(errors, CountSelected(policy, sequence), 4,
+            "priority-only comparison count");
+
+        policy.SetGuidanceNeed(0.8f);
+        policy.SetComparisonMode(ComparisonSelectionMode.ContextAndUserState);
+        Expect(errors, CountSelected(policy, sequence), 3,
+            "proposed high-need comparison count");
+
+        policy.SetGuidanceNeed(0.2f);
+        policy.SetComparisonMode(ComparisonSelectionMode.ContextAndUserState);
+        Expect(errors, CountSelected(policy, sequence), 2,
+            "proposed low-need comparison count");
+    }
+
+    private static int CountSelected(PrioritySelectionPolicy policy, GeneratedSceneToken[] tokens)
+    {
+        policy.ResetUserState();
+        int selected = 0;
+        foreach (GeneratedSceneToken token in tokens)
+        {
+            SelectionResult result = policy.Select(token);
+            if (result != null && result.selected) selected++;
+        }
+        return selected;
+    }
+
+    private static void CheckAdaptivePresentationPolicy(List<string> errors)
+    {
+        var policyObject = new GameObject("SelfCheckAdaptivePresentationPolicy");
+
+        try
+        {
+            var selectionPolicy = policyObject.AddComponent<PrioritySelectionPolicy>();
+            var presentationPolicy = policyObject.AddComponent<PresentationPolicy>();
+            var critical = CreateGeneratedToken(
+                "P_WARNING", "Workpiece01", "WorkpieceWork", 2);
+            critical.utteranceId = "WRONG_PLACEMENT";
+            critical.direction = "Front Right";
+
+            selectionPolicy.SetComparisonMode(ComparisonSelectionMode.ContextAndUserState);
+            selectionPolicy.SetGuidanceNeed(0.8f);
+            SelectionResult highNeedSelection = selectionPolicy.Select(critical);
+            PresentationResult highNeed = presentationPolicy.Present(critical, highNeedSelection, null);
+
+            selectionPolicy.SetGuidanceNeed(0.2f);
+            SelectionResult lowNeedSelection = selectionPolicy.Select(critical);
+            PresentationResult lowNeed = presentationPolicy.Present(critical, lowNeedSelection, null);
+
+            Expect(errors, highNeed.mode, "AdaptiveDetailedCritical",
+                "high-need critical presentation mode");
+            Expect(errors, lowNeed.mode, "AdaptiveCompactAlert",
+                "low-need critical presentation mode");
+            if (string.IsNullOrEmpty(highNeed.message) || !highNeed.message.Contains("Front Right"))
+            {
+                errors.Add("high-need guidance should explicitly include direction.");
+            }
+            if (!string.IsNullOrEmpty(lowNeed.message) && lowNeed.message.Contains("Front Right"))
+            {
+                errors.Add("low-need compact alert should omit redundant direction text.");
+            }
+            if (highNeed.cueScale <= lowNeed.cueScale || highNeed.cueDuration <= lowNeed.cueDuration)
+            {
+                errors.Add("high-need guidance should be larger and longer than low-need guidance.");
+            }
+        }
+        finally
+        {
+            Object.DestroyImmediate(policyObject);
+        }
+    }
+
+    private static void CheckUserAdaptation(List<string> errors)
+    {
+        var adaptationObject = new GameObject("SelfCheckUserAdaptation");
+
+        try
+        {
+            var selectionPolicy = adaptationObject.AddComponent<PrioritySelectionPolicy>();
+            selectionPolicy.SetGuidanceNeed(0.50f);
+            var adaptation = adaptationObject.AddComponent<UserAdaptationController>();
+
+            adaptation.RecordHelpRequest("self_check_help");
+            ExpectClose(errors, selectionPolicy.GuidanceNeed, 0.75f,
+                "help request guidance need");
+            adaptation.RecordError("self_check_error");
+            ExpectClose(errors, selectionPolicy.GuidanceNeed, 0.95f,
+                "error guidance need");
+            adaptation.RecordSuccess("self_check_success");
+            ExpectClose(errors, selectionPolicy.GuidanceNeed, 0.80f,
+                "success guidance need");
+
+            Expect(errors, adaptation.HelpCount, 1, "help event count");
+            Expect(errors, adaptation.ErrorCount, 1, "error event count");
+            Expect(errors, adaptation.SuccessCount, 1, "success event count");
+        }
+        finally
+        {
+            Object.DestroyImmediate(adaptationObject);
+        }
+    }
+
+    private static GeneratedSceneToken CreateGeneratedToken(
+        string eventId, string targetObjectId, string taskState, int priority)
+    {
+        return new GeneratedSceneToken
+        {
+            scenarioId = "SELF_CHECK",
+            eventId = eventId,
+            targetObjectId = targetObjectId,
+            taskState = taskState,
+            priority = priority
+        };
+    }
+
+    private static void ExpectSelection(
+        List<string> errors,
+        SelectionResult actual,
+        bool expectedSelected,
+        CommunicationLevel expectedLevel,
+        string message)
+    {
+        if (actual == null)
+        {
+            errors.Add(message + ": selection result was null.");
+            return;
+        }
+
+        if (actual.selected != expectedSelected || actual.level != expectedLevel)
+        {
+            errors.Add(message + " actualSelected=" + actual.selected +
+                " expectedSelected=" + expectedSelected +
+                " actualLevel=" + actual.level +
+                " expectedLevel=" + expectedLevel);
         }
     }
 

@@ -21,7 +21,11 @@ public sealed class ScenarioPlayer : MonoBehaviour
     [SerializeField]
     private PresentationPolicy presentationPolicy;
 
+    [SerializeField]
+    private SemanticPacketTransportRouter transportRouter;
+
     private Coroutine playRoutine;
+    private ScenarioComparisonDemo comparisonDemo;
 
     private void Reset()
     {
@@ -31,6 +35,7 @@ public sealed class ScenarioPlayer : MonoBehaviour
         selectionPolicy = GetComponent<PrioritySelectionPolicy>();
         packetBuilder = GetComponent<SemanticPacketBuilder>();
         presentationPolicy = GetComponent<PresentationPolicy>();
+        transportRouter = GetComponent<SemanticPacketTransportRouter>();
     }
 
     private void Start()
@@ -65,12 +70,39 @@ public sealed class ScenarioPlayer : MonoBehaviour
             presentationPolicy = GetComponent<PresentationPolicy>();
         }
 
+        if (transportRouter == null)
+        {
+            transportRouter = GetComponent<SemanticPacketTransportRouter>();
+        }
+
+        comparisonDemo = GetComponent<ScenarioComparisonDemo>();
+
         if (loader == null || loader.CurrentScenario == null)
         {
             return;
         }
 
         playRoutine = StartCoroutine(PlayEvents(loader.CurrentScenario));
+    }
+
+    public void RestartPlayback()
+    {
+        if (playRoutine != null) StopCoroutine(playRoutine);
+        if (loader == null || loader.CurrentScenario == null) return;
+        if (selectionPolicy != null) selectionPolicy.ResetUserState();
+        playRoutine = StartCoroutine(PlayEvents(loader.CurrentScenario));
+    }
+
+    public void StopGroundTruthPlayback()
+    {
+        if (playRoutine == null) return;
+        StopCoroutine(playRoutine);
+        playRoutine = null;
+    }
+
+    public void ProcessInteractiveEvent(string scenarioId, GroundTruthEvent scenarioEvent)
+    {
+        ProcessEvent(scenarioId, scenarioEvent);
     }
 
     private IEnumerator PlayEvents(GroundTruthScenario scenario)
@@ -101,40 +133,49 @@ public sealed class ScenarioPlayer : MonoBehaviour
                 $"{scenarioEvent.objectId}"
             );
 
-            if (tokenGenerator == null)
-            {
-                continue;
-            }
-
-            GeneratedSceneToken token = tokenGenerator.Generate(
-                scenario.scenarioId,
-                scenarioEvent
-            );
-
-            SelectionResult selection = null;
-            if (selectionPolicy != null)
-            {
-                selection = selectionPolicy.Select(token);
-            }
-
-            SemanticPacket packet = null;
-            if (packetBuilder != null)
-            {
-                packet = packetBuilder.Build(token, selection);
-            }
-
-            PresentationResult presentation = null;
-            if (presentationPolicy != null)
-            {
-                presentation = presentationPolicy.Present(token, selection, packet);
-            }
-
-            if (experimentLogger != null)
-            {
-                experimentLogger.LogToken(token, selection, packet, presentation);
-            }
+            ProcessEvent(scenario.scenarioId, scenarioEvent);
         }
 
         playRoutine = null;
+    }
+
+    private void ProcessEvent(string scenarioId, GroundTruthEvent scenarioEvent)
+    {
+        if (tokenGenerator == null || scenarioEvent == null) return;
+
+        GeneratedSceneToken token = tokenGenerator.Generate(scenarioId, scenarioEvent);
+
+        SelectionResult selection = null;
+        if (selectionPolicy != null)
+        {
+            selection = selectionPolicy.Select(token);
+        }
+
+        SemanticPacket packet = null;
+        if (packetBuilder != null)
+        {
+            packet = packetBuilder.Build(token, selection);
+        }
+
+        if (packet != null && transportRouter != null)
+        {
+            transportRouter.Publish(token.eventId, packet);
+        }
+
+        PresentationResult presentation = null;
+        if (presentationPolicy != null)
+        {
+            presentation = presentationPolicy.Present(token, selection, packet);
+        }
+
+        if (experimentLogger != null)
+        {
+            experimentLogger.LogToken(token, selection, packet, presentation);
+        }
+
+        if (comparisonDemo != null)
+        {
+            comparisonDemo.Record(token, selection, packet, presentation);
+        }
     }
 }

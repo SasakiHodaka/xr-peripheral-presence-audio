@@ -51,5 +51,18 @@ public static class ScenarioBootstrapper
         {
             target.AddComponent<ScenarioPlayer>();
         }
+
+        if (target.GetComponent<ScenarioComparisonDemo>() == null)
+        {
+            target.AddComponent<ScenarioComparisonDemo>();
+        }
+        if (target.GetComponent<InteractiveObjectScenario>() == null)
+        {
+            target.AddComponent<InteractiveObjectScenario>();
+        }
+        if (target.GetComponent<UserAdaptationController>() == null)
+        {
+            target.AddComponent<UserAdaptationController>();
+        }
     }
 }

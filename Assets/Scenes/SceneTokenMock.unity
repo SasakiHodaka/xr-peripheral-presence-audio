@@ -978,6 +978,8 @@ MonoBehaviour:
   desktopSpatialBlend: 0.75
   isSpeaking: 0
   semanticToken: 2
+  urgency: 0
+  targetObjectId: 
   utteranceText: Yes, that part looks aligned.
   semanticConfidence: 1
   toggleKey: 98
@@ -1433,6 +1435,8 @@ MonoBehaviour:
   desktopSpatialBlend: 0.75
   isSpeaking: 0
   semanticToken: 3
+  urgency: 0
+  targetObjectId: 
   utteranceText: Move this object forward, please.
   semanticConfidence: 1
   toggleKey: 99
@@ -2029,6 +2033,10 @@ MonoBehaviour:
   logTokens: 1
   logOnlyDuringExperimentSession: 1
   showDebugHud: 1
+  showResponseTimingCue: 1
+  logResponseWindowEvents: 1
+  enableTokenSelection: 0
+  minimumTransmissionImportance: 0.45
 --- !u!114 &1812055675
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2057,6 +2065,8 @@ MonoBehaviour:
     startTime: 0
     duration: 2
     semanticToken: 1
+    urgency: 1
+    targetObjectId: Pump3
     utteranceText: Can you check this object for me?
     audioClip: {fileID: 8300000, guid: ece3b4492d6a2b4409a86dee5393fc22, type: 3}
     semanticConfidence: 0.95
@@ -2064,6 +2074,8 @@ MonoBehaviour:
     startTime: 3
     duration: 2
     semanticToken: 2
+    urgency: 0
+    targetObjectId: Pump3
     utteranceText: Yes, that part looks aligned.
     audioClip: {fileID: 8300000, guid: f200750223137cc458ae27f7c05eb28e, type: 3}
     semanticConfidence: 0.95
@@ -2071,6 +2083,8 @@ MonoBehaviour:
     startTime: 5.4
     duration: 1.8
     semanticToken: 3
+    urgency: 2
+    targetObjectId: Valve2
     utteranceText: Move this object forward, please.
     audioClip: {fileID: 8300000, guid: 5c1076f8f2df7e5428cfec6949adf025, type: 3}
     semanticConfidence: 0.9
@@ -2078,6 +2092,8 @@ MonoBehaviour:
     startTime: 6.2
     duration: 2
     semanticToken: 7
+    urgency: 3
+    targetObjectId: Pump3
     utteranceText: Be careful, the direction is wrong.
     audioClip: {fileID: 8300000, guid: 4818407c1614cc944a04e33edd0174db, type: 3}
     semanticConfidence: 0.9
@@ -2085,6 +2101,8 @@ MonoBehaviour:
     startTime: 9
     duration: 1.6
     semanticToken: 4
+    urgency: 0
+    targetObjectId: Valve2
     utteranceText: I think that direction is good.
     audioClip: {fileID: 8300000, guid: df9920679f3726640af7cd068aeda60a, type: 3}
     semanticConfidence: 0.85
@@ -2192,6 +2210,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fileNamePrefix: scene_tokens
   writeHeaderOnStart: 1
+--- !u!4 &1812055682
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812055673}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1812055683
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2221,13 +2254,89 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fileNamePrefix: scene_packets
   writeHeaderOnStart: 1
---- !u!4 &1812055682
+--- !u!1 &1865825023
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1865825028}
+  - component: {fileID: 1865825027}
+  - component: {fileID: 1865825026}
+  - component: {fileID: 1865825025}
+  - component: {fileID: 1865825024}
+  m_Layer: 0
+  m_Name: Scenariomanager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1865825024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865825023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a078919bde1ee1e41b68cac770c5c99f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  loader: {fileID: 0}
+  tokenGenerator: {fileID: 0}
+  experimentLogger: {fileID: 0}
+  selectionPolicy: {fileID: 0}
+  packetBuilder: {fileID: 0}
+  presentationPolicy: {fileID: 0}
+--- !u!114 &1865825025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865825023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1827494307f2aa147ad8053b116933d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  logDirectoryName: scene_token_ground_truth
+--- !u!114 &1865825026
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865825023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 924d53b0da1cabd41b59a2f26dd2ad60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1865825027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865825023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65aa4a044c408f645a74bd34798f875c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scenarioFileName: scenario_03.json
+--- !u!4 &1865825028
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1812055673}
+  m_GameObject: {fileID: 1865825023}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -2566,6 +2675,8 @@ MonoBehaviour:
   desktopSpatialBlend: 0.75
   isSpeaking: 0
   semanticToken: 1
+  urgency: 0
+  targetObjectId: 
   utteranceText: Can you check this object for me?
   semanticConfidence: 1
   toggleKey: 97
@@ -2712,3 +2823,4 @@ SceneRoots:
   - {fileID: 1007977321}
   - {fileID: 1249119007}
   - {fileID: 1812055682}
+  - {fileID: 1865825028}

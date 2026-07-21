@@ -27,7 +27,7 @@ public sealed class ExperimentLogger : MonoBehaviour
 
         File.WriteAllText(
             TokenLogPath,
-            "scenarioId,eventId,sequence,expectedTime,speakerId,direction,targetObjectId,utteranceId,taskState,priority,communicationLevel,selected,selectionReason,packetSeq,packetFlags,packetBytes,expireTime,presentationMode,presentationDescription,relativeAngle,sourceX,sourceY,sourceZ\n"
+            "scenarioId,eventId,sequence,expectedTime,speakerId,direction,targetObjectId,utteranceId,taskState,priority,guidanceNeed,urgencyScore,relevanceScore,noveltyScore,needFitScore,totalScore,decisionThreshold,communicationLevel,selected,selectionReason,packetSeq,packetFlags,packetBytes,expireTime,presentationMode,presentationDescription,presentationMessage,cueScale,cueDuration,audioGain,relativeAngle,sourceX,sourceY,sourceZ\n"
         );
 
         Debug.Log($"Experiment Logger Ready: {TokenLogPath}");
@@ -54,6 +54,7 @@ public sealed class ExperimentLogger : MonoBehaviour
         string expireTime = packet != null ? packet.expireTime.ToString("F3") : "";
         string presentationMode = presentation != null ? presentation.mode : "";
         string presentationDescription = presentation != null ? presentation.description : "";
+        string presentationMessage = presentation != null ? presentation.message : "";
 
         string row =
             $"{Escape(token.scenarioId)}," +
@@ -66,6 +67,13 @@ public sealed class ExperimentLogger : MonoBehaviour
             $"{Escape(token.utteranceId)}," +
             $"{Escape(token.taskState)}," +
             $"{token.priority}," +
+            $"{FormatScore(selection, value => value.guidanceNeed)}," +
+            $"{FormatScore(selection, value => value.urgencyScore)}," +
+            $"{FormatScore(selection, value => value.relevanceScore)}," +
+            $"{FormatScore(selection, value => value.noveltyScore)}," +
+            $"{FormatScore(selection, value => value.needFitScore)}," +
+            $"{FormatScore(selection, value => value.totalScore)}," +
+            $"{FormatScore(selection, value => value.decisionThreshold)}," +
             $"{Escape(communicationLevel)}," +
             $"{selected}," +
             $"{Escape(selectionReason)}," +
@@ -75,6 +83,10 @@ public sealed class ExperimentLogger : MonoBehaviour
             $"{expireTime}," +
             $"{Escape(presentationMode)}," +
             $"{Escape(presentationDescription)}," +
+            $"{Escape(presentationMessage)}," +
+            $"{FormatPresentation(presentation, value => value.cueScale)}," +
+            $"{FormatPresentation(presentation, value => value.cueDuration)}," +
+            $"{FormatPresentation(presentation, value => value.audioGain)}," +
             $"{token.relativeAngle:F3}," +
             $"{token.sourceX:F3}," +
             $"{token.sourceY:F3}," +
@@ -111,5 +123,15 @@ public sealed class ExperimentLogger : MonoBehaviour
         }
 
         return value;
+    }
+
+    private static string FormatScore(SelectionResult selection, System.Func<SelectionResult, float> selector)
+    {
+        return selection != null ? selector(selection).ToString("F3", System.Globalization.CultureInfo.InvariantCulture) : "";
+    }
+
+    private static string FormatPresentation(PresentationResult presentation, System.Func<PresentationResult, float> selector)
+    {
+        return presentation != null ? selector(presentation).ToString("F3", System.Globalization.CultureInfo.InvariantCulture) : "";
     }
 }
